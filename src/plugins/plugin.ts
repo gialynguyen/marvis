@@ -26,6 +26,9 @@ export interface Plugin {
   getAgent?(): Agent | undefined;
   getSystemPromptFragment(): string;
   healthCheck(): Promise<PluginHealthCheck>;
+
+  promoteToAgent(agent: Agent): void;
+  demoteToTools(): void;
 }
 
 export abstract class BasePlugin implements Plugin {
