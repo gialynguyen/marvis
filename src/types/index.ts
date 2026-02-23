@@ -91,11 +91,19 @@ export interface Memory {
 // ============= Config Types =============
 
 export interface MarvisConfig {
-  systemPrompt?: string;
-  maxContextTokens?: number;
-  localModel?: string;
-  cloudModel?: string;
-  alwaysLocal?: boolean;
+  llm: {
+    provider: "openai" | "anthropic" | "google";
+    model: string;
+    fallbackProvider?: "openai" | "anthropic" | "google";
+    fallbackModel?: string;
+  };
+  tools: {
+    confirmDangerous: boolean;
+    dangerThreshold: "moderate" | "dangerous";
+  };
+  system: {
+    systemPrompt: string;
+  };
 }
 
 export interface DaemonConfig {
