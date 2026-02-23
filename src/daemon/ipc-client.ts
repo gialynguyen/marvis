@@ -1,6 +1,6 @@
 import { createConnection, Socket } from "net";
 import { randomUUID } from "crypto";
-import type { IPCRequest, IPCResponse, IPCRequestType } from "../types/index.js";
+import type { IPCRequest, IPCResponse, IPCRequestType, IPCStreamChunk } from "../types/index.js";
 
 export class IPCClient {
   private socketPath: string;
@@ -94,12 +94,12 @@ export class IPCClient {
         if (!line.trim()) continue;
 
         try {
-          const response = JSON.parse(line);
+          const response: IPCStreamChunk = JSON.parse(line);
           if (response.id === requestWithId.id) {
-            if (response.done) {
+            if (response.type === "done" || response.type === "error") {
               done = true;
               socket.end();
-            } else if (response.chunk) {
+            } else if (response.type === "text" && response.chunk) {
               chunks.push(response.chunk);
             }
           }
