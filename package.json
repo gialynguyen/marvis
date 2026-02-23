@@ -24,17 +24,18 @@
     "@mariozechner/pi-ai": "latest",
     "@sinclair/typebox": "^0.32.0",
     "better-sqlite3": "^11.0.0",
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "smol-toml": "^1.6.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.4.0",
-    "tsx": "^4.0.0",
-    "vitest": "^1.0.0",
-    "eslint": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0"
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.0.0"
   },
   "engines": {
     "node": ">=20.0.0"
