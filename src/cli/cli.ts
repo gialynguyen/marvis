@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { existsSync, readFileSync } from "fs";
 import { spawn } from "child_process";
 import { IPCClient } from "../daemon/ipc-client.js";
+import { MarvisREPL } from "./repl.js";
 import type { DaemonConfig } from "../types/index.js";
 import { loadConfig } from "../core/config.js";
 
@@ -128,6 +129,21 @@ export function createCLI(): Command {
       } else {
         console.error("Failed to list plugins:", response.error);
       }
+    });
+
+  // Chat (REPL)
+  program
+    .command("chat")
+    .description("Start interactive chat with Marvis")
+    .action(async () => {
+      if (!isDaemonRunning()) {
+        console.error("Marvis daemon is not running. Start it with: marvis start");
+        process.exit(1);
+      }
+      
+      const config = getDefaultConfig();
+      const repl = new MarvisREPL(config.socketPath);
+      await repl.start();
     });
 
   return program;
