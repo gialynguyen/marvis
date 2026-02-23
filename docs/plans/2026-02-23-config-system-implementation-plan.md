@@ -1,5 +1,14 @@
 # Config System Implementation Plan
 
+> **⚠️ Post-Migration Note (2026-02-27):** This document was written before the monorepo migration.
+> The project has been restructured from a flat `src/` layout into a pnpm monorepo with:
+> - `packages/core/` (@marvis/core) — Core logic, daemon, memory, plugin system, types
+> - `packages/plugin-shell/` (@marvis/plugin-shell) — Shell command plugin
+> - `apps/cli/` (@marvis/cli) — CLI interface
+>
+> All file paths, import paths, and build commands in this document have been updated to reflect the new structure.
+> Build: `pnpm build` (Turborepo) | Test: `pnpm test` | Lint: `pnpm lint` (Biome.js)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace environment-variable-only config with TOML-based config system at `~/.marvis/config.toml` with full precedence chain (CLI > Env > TOML > Defaults).
@@ -13,20 +22,20 @@
 ## Task 1: Add smol-toml Dependency
 
 **Files:**
-- Modify: `package.json`
+- Modify: `package.json` (root)
 
 **Step 1: Install smol-toml**
 
 Run:
 ```bash
-npm install smol-toml
+pnpm install smol-toml
 ```
 
 **Step 2: Verify installation**
 
 Run:
 ```bash
-npm ls smol-toml
+pnpm list smol-toml
 ```
 
 Expected: `smol-toml@1.x.x`
@@ -43,12 +52,12 @@ git commit -m "chore: add smol-toml dependency for TOML config parsing"
 ## Task 2: Expand MarvisConfig Type
 
 **Files:**
-- Modify: `src/types/index.ts:96-121`
-- Test: `tests/core/config.test.ts`
+- Modify: `packages/core/src/types/index.ts:96-121`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write failing test for new config sections**
 
-Add to `tests/core/config.test.ts`:
+Add to `packages/core/tests/core/config.test.ts`:
 
 ```typescript
 it("should have paths section in default config", () => {
@@ -74,14 +83,14 @@ it("should have empty plugins and aliases by default", () => {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: FAIL - `config.paths` is undefined
 
 **Step 3: Update MarvisConfig interface**
 
-Modify `src/types/index.ts`, replace the existing `MarvisConfig` interface (lines 98-112):
+Modify `packages/core/src/types/index.ts`, replace the existing `MarvisConfig` interface (lines 98-112):
 
 ```typescript
 export interface MarvisConfig {
@@ -115,7 +124,7 @@ export interface MarvisConfig {
 
 **Step 4: Update DEFAULT_CONFIG in config.ts**
 
-Modify `src/core/config.ts`, update `DEFAULT_CONFIG`:
+Modify `packages/core/src/core/config.ts`, update `DEFAULT_CONFIG`:
 
 ```typescript
 import { homedir } from "os";
@@ -158,7 +167,7 @@ Be concise but thorough. When executing commands or making changes, explain what
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: All tests PASS
@@ -167,7 +176,7 @@ Expected: All tests PASS
 
 Run:
 ```bash
-npm run typecheck
+pnpm typecheck
 ```
 
 Expected: No errors
@@ -175,7 +184,7 @@ Expected: No errors
 **Step 7: Commit**
 
 ```bash
-git add src/types/index.ts src/core/config.ts tests/core/config.test.ts
+git add packages/core/src/types/index.ts packages/core/src/core/config.ts packages/core/tests/core/config.test.ts
 git commit -m "feat(config): expand MarvisConfig with paths, logging, plugins, aliases"
 ```
 
@@ -184,12 +193,12 @@ git commit -m "feat(config): expand MarvisConfig with paths, logging, plugins, a
 ## Task 3: Create TypeBox Config Schema
 
 **Files:**
-- Create: `src/core/config-schema.ts`
-- Test: `tests/core/config-schema.test.ts`
+- Create: `packages/core/src/core/config-schema.ts`
+- Test: `packages/core/tests/core/config-schema.test.ts`
 
 **Step 1: Write failing test for schema validation**
 
-Create `tests/core/config-schema.test.ts`:
+Create `packages/core/tests/core/config-schema.test.ts`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -235,14 +244,14 @@ describe("MarvisConfigSchema", () => {
 
 Run:
 ```bash
-npm test -- --run tests/core/config-schema.test.ts
+pnpm test -- --run packages/core/tests/core/config-schema.test.ts
 ```
 
 Expected: FAIL - Cannot find module `config-schema.js`
 
 **Step 3: Create config-schema.ts**
 
-Create `src/core/config-schema.ts`:
+Create `packages/core/src/core/config-schema.ts`:
 
 ```typescript
 import { Type, Static } from "@sinclair/typebox";
@@ -305,14 +314,14 @@ export type MarvisConfigFromSchema = Static<typeof MarvisConfigSchema>;
 
 Run:
 ```bash
-npm test -- --run tests/core/config-schema.test.ts
+pnpm test -- --run packages/core/tests/core/config-schema.test.ts
 ```
 
 Expected: All 4 tests PASS
 
 **Step 5: Update core barrel export**
 
-Add to `src/core/index.ts`:
+Add to `packages/core/src/core/index.ts`:
 
 ```typescript
 export * from "./config-schema.js";
@@ -321,7 +330,7 @@ export * from "./config-schema.js";
 **Step 6: Commit**
 
 ```bash
-git add src/core/config-schema.ts tests/core/config-schema.test.ts src/core/index.ts
+git add packages/core/src/core/config-schema.ts packages/core/tests/core/config-schema.test.ts packages/core/src/core/index.ts
 git commit -m "feat(config): add TypeBox schema for config validation"
 ```
 
@@ -330,12 +339,12 @@ git commit -m "feat(config): add TypeBox schema for config validation"
 ## Task 4: Implement ConfigError Class
 
 **Files:**
-- Create: `src/core/config-error.ts`
-- Test: `tests/core/config-error.test.ts`
+- Create: `packages/core/src/core/config-error.ts`
+- Test: `packages/core/tests/core/config-error.test.ts`
 
 **Step 1: Write failing test**
 
-Create `tests/core/config-error.test.ts`:
+Create `packages/core/tests/core/config-error.test.ts`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -370,14 +379,14 @@ describe("ConfigError", () => {
 
 Run:
 ```bash
-npm test -- --run tests/core/config-error.test.ts
+pnpm test -- --run packages/core/tests/core/config-error.test.ts
 ```
 
 Expected: FAIL - Cannot find module
 
 **Step 3: Implement ConfigError**
 
-Create `src/core/config-error.ts`:
+Create `packages/core/src/core/config-error.ts`:
 
 ```typescript
 export class ConfigError extends Error {
@@ -401,14 +410,14 @@ export class ConfigError extends Error {
 
 Run:
 ```bash
-npm test -- --run tests/core/config-error.test.ts
+pnpm test -- --run packages/core/tests/core/config-error.test.ts
 ```
 
 Expected: All 3 tests PASS
 
 **Step 5: Export from core barrel**
 
-Add to `src/core/index.ts`:
+Add to `packages/core/src/core/index.ts`:
 
 ```typescript
 export * from "./config-error.js";
@@ -417,7 +426,7 @@ export * from "./config-error.js";
 **Step 6: Commit**
 
 ```bash
-git add src/core/config-error.ts tests/core/config-error.test.ts src/core/index.ts
+git add packages/core/src/core/config-error.ts packages/core/tests/core/config-error.test.ts packages/core/src/core/index.ts
 git commit -m "feat(config): add ConfigError class for detailed error reporting"
 ```
 
@@ -426,12 +435,12 @@ git commit -m "feat(config): add ConfigError class for detailed error reporting"
 ## Task 5: Implement TOML Parsing
 
 **Files:**
-- Modify: `src/core/config.ts`
-- Test: `tests/core/config.test.ts`
+- Modify: `packages/core/src/core/config.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write failing test for TOML parsing**
 
-Add to `tests/core/config.test.ts`:
+Add to `packages/core/tests/core/config.test.ts`:
 
 ```typescript
 import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
@@ -487,14 +496,14 @@ provider = "openai"
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: FAIL - TOML parsing not implemented
 
 **Step 3: Implement parseTomlConfig**
 
-Update `src/core/config.ts`:
+Update `packages/core/src/core/config.ts`:
 
 ```typescript
 import { homedir } from "os";
@@ -731,7 +740,7 @@ export function loadConfig(): MarvisConfig {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: All tests PASS
@@ -739,7 +748,7 @@ Expected: All tests PASS
 **Step 5: Commit**
 
 ```bash
-git add src/core/config.ts tests/core/config.test.ts
+git add packages/core/src/core/config.ts packages/core/tests/core/config.test.ts
 git commit -m "feat(config): implement TOML config parsing with smol-toml"
 ```
 
@@ -748,12 +757,12 @@ git commit -m "feat(config): implement TOML config parsing with smol-toml"
 ## Task 6: Implement Auto-Create Config
 
 **Files:**
-- Modify: `src/core/config.ts`
-- Test: `tests/core/config.test.ts`
+- Modify: `packages/core/src/core/config.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write failing test for auto-creation**
 
-Add to `tests/core/config.test.ts`:
+Add to `packages/core/tests/core/config.test.ts`:
 
 ```typescript
 import { ensureConfigExists, getConfigPath, DEFAULT_TOML_TEMPLATE } from "../../src/core/config.js";
@@ -807,14 +816,14 @@ describe("Config Auto-Creation", () => {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: FAIL - `ensureConfigExists` not exported
 
 **Step 3: Implement ensureConfigExists and DEFAULT_TOML_TEMPLATE**
 
-Add to `src/core/config.ts`:
+Add to `packages/core/src/core/config.ts`:
 
 ```typescript
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -879,7 +888,7 @@ export function ensureConfigExists(): void {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: All tests PASS
@@ -887,7 +896,7 @@ Expected: All tests PASS
 **Step 5: Commit**
 
 ```bash
-git add src/core/config.ts tests/core/config.test.ts
+git add packages/core/src/core/config.ts packages/core/tests/core/config.test.ts
 git commit -m "feat(config): implement auto-creation of config file with defaults"
 ```
 
@@ -896,12 +905,12 @@ git commit -m "feat(config): implement auto-creation of config file with default
 ## Task 7: Implement Path Expansion
 
 **Files:**
-- Modify: `src/core/config.ts`
-- Test: `tests/core/config.test.ts`
+- Modify: `packages/core/src/core/config.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write failing test for path expansion**
 
-Add to `tests/core/config.test.ts`:
+Add to `packages/core/tests/core/config.test.ts`:
 
 ```typescript
 describe("Path Expansion", () => {
@@ -929,14 +938,14 @@ socket_path = "~/.marvis/marvis.sock"
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: FAIL - path still contains `~`
 
 **Step 3: Implement expandPaths**
 
-Add to `src/core/config.ts`:
+Add to `packages/core/src/core/config.ts`:
 
 ```typescript
 function expandPath(path: string): string {
@@ -982,7 +991,7 @@ export function loadConfig(): MarvisConfig {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: All tests PASS
@@ -990,7 +999,7 @@ Expected: All tests PASS
 **Step 5: Commit**
 
 ```bash
-git add src/core/config.ts tests/core/config.test.ts
+git add packages/core/src/core/config.ts packages/core/tests/core/config.test.ts
 git commit -m "feat(config): implement path expansion for ~ in paths"
 ```
 
@@ -999,12 +1008,12 @@ git commit -m "feat(config): implement path expansion for ~ in paths"
 ## Task 8: Implement TypeBox Validation
 
 **Files:**
-- Modify: `src/core/config.ts`
-- Test: `tests/core/config.test.ts`
+- Modify: `packages/core/src/core/config.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write failing test for validation**
 
-Add to `tests/core/config.test.ts`:
+Add to `packages/core/tests/core/config.test.ts`:
 
 ```typescript
 import { ConfigError } from "../../src/core/config-error.js";
@@ -1031,14 +1040,14 @@ model = "test"
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: FAIL - does not throw ConfigError
 
 **Step 3: Implement validation**
 
-Add validation to `src/core/config.ts`:
+Add validation to `packages/core/src/core/config.ts`:
 
 ```typescript
 import { Value } from "@sinclair/typebox/value";
@@ -1090,7 +1099,7 @@ export function loadConfig(): MarvisConfig {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: All tests PASS
@@ -1098,7 +1107,7 @@ Expected: All tests PASS
 **Step 5: Commit**
 
 ```bash
-git add src/core/config.ts tests/core/config.test.ts
+git add packages/core/src/core/config.ts packages/core/tests/core/config.test.ts
 git commit -m "feat(config): add TypeBox validation with ConfigError"
 ```
 
@@ -1107,13 +1116,13 @@ git commit -m "feat(config): add TypeBox validation with ConfigError"
 ## Task 9: Add CLI Config Overrides
 
 **Files:**
-- Modify: `src/core/config.ts`
-- Modify: `src/cli/cli.ts`
-- Test: `tests/core/config.test.ts`
+- Modify: `packages/core/src/core/config.ts`
+- Modify: `apps/cli/src/cli/cli.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write failing test for CLI overrides**
 
-Add to `tests/core/config.test.ts`:
+Add to `packages/core/tests/core/config.test.ts`:
 
 ```typescript
 describe("CLI Overrides", () => {
@@ -1134,14 +1143,14 @@ describe("CLI Overrides", () => {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: FAIL - loadConfig doesn't accept args
 
 **Step 3: Update loadConfig signature**
 
-Modify `src/core/config.ts`:
+Modify `packages/core/src/core/config.ts`:
 
 ```typescript
 export interface CliConfigArgs {
@@ -1193,14 +1202,14 @@ export function loadConfig(cliArgs?: Partial<CliConfigArgs>): MarvisConfig {
 
 Run:
 ```bash
-npm test -- --run tests/core/config.test.ts
+pnpm test -- --run packages/core/tests/core/config.test.ts
 ```
 
 Expected: All tests PASS
 
 **Step 5: Update CLI to pass args**
 
-Modify `src/cli/cli.ts` - add options to commands:
+Modify `apps/cli/src/cli/cli.ts` - add options to commands:
 
 ```typescript
 .command("start")
@@ -1214,7 +1223,7 @@ Modify `src/cli/cli.ts` - add options to commands:
 
 Run:
 ```bash
-npm run typecheck
+pnpm typecheck
 ```
 
 Expected: No errors
@@ -1222,7 +1231,7 @@ Expected: No errors
 **Step 7: Commit**
 
 ```bash
-git add src/core/config.ts src/cli/cli.ts tests/core/config.test.ts
+git add packages/core/src/core/config.ts apps/cli/src/cli/cli.ts packages/core/tests/core/config.test.ts
 git commit -m "feat(config): add CLI config overrides with highest precedence"
 ```
 
@@ -1231,9 +1240,9 @@ git commit -m "feat(config): add CLI config overrides with highest precedence"
 ## Task 10: Update Consumers to Use New Paths
 
 **Files:**
-- Modify: `src/bin/marvis-daemon.ts`
-- Modify: `src/cli/cli.ts`
-- Modify: `src/daemon/daemon.ts`
+- Modify: `packages/core/src/bin/marvis-daemon.ts`
+- Modify: `apps/cli/src/cli/cli.ts`
+- Modify: `packages/core/src/daemon/daemon.ts`
 
 **Step 1: Update marvis-daemon.ts**
 
@@ -1263,13 +1272,13 @@ daemon.start().catch((err) => {
 
 **Step 2: Update CLI defaults**
 
-Update `src/cli/cli.ts` to use config paths instead of hardcoded defaults.
+Update `apps/cli/src/cli/cli.ts` to use config paths instead of hardcoded defaults.
 
 **Step 3: Run full test suite**
 
 Run:
 ```bash
-npm test -- --run
+pnpm test -- --run
 ```
 
 Expected: All tests PASS
@@ -1278,7 +1287,7 @@ Expected: All tests PASS
 
 Run:
 ```bash
-npm run typecheck
+pnpm typecheck
 ```
 
 Expected: No errors
@@ -1286,7 +1295,7 @@ Expected: No errors
 **Step 5: Commit**
 
 ```bash
-git add src/bin/marvis-daemon.ts src/cli/cli.ts src/daemon/daemon.ts
+git add packages/core/src/bin/marvis-daemon.ts apps/cli/src/cli/cli.ts packages/core/src/daemon/daemon.ts
 git commit -m "refactor: update all consumers to use config paths"
 ```
 
@@ -1295,7 +1304,7 @@ git commit -m "refactor: update all consumers to use config paths"
 ## Task 11: Integration Test & Final Verification
 
 **Files:**
-- Test: `tests/core/config.test.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Add integration test**
 
@@ -1340,7 +1349,7 @@ level = "warn"
 
 Run:
 ```bash
-npm test -- --run
+pnpm test -- --run
 ```
 
 Expected: All tests PASS
@@ -1349,7 +1358,7 @@ Expected: All tests PASS
 
 Run:
 ```bash
-npm run build
+pnpm build
 ```
 
 Expected: Build succeeds
@@ -1369,14 +1378,14 @@ model = "claude-sonnet-4-0"
 level = "debug"
 EOF
 
-MARVIS_CONFIG=~/.marvis-test/config.toml npm run cli -- status
+MARVIS_CONFIG=~/.marvis-test/config.toml pnpm cli status
 rm -rf ~/.marvis-test
 ```
 
 **Step 5: Final commit**
 
 ```bash
-git add tests/core/config.test.ts
+git add packages/core/tests/core/config.test.ts
 git commit -m "test: add full config integration test"
 ```
 

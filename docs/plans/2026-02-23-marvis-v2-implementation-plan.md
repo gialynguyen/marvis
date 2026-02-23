@@ -1,5 +1,14 @@
 # Marvis V2 LLM Integration Implementation Plan
 
+> **⚠️ Post-Migration Note (2026-02-27):** This document was written before the monorepo migration.
+> The project has been restructured from a flat `src/` layout into a pnpm monorepo with:
+> - `packages/core/` (@marvis/core) — Core logic, daemon, memory, plugin system, types
+> - `packages/plugin-shell/` (@marvis/plugin-shell) — Shell command plugin
+> - `apps/cli/` (@marvis/cli) — CLI interface
+>
+> All file paths, import paths, and build commands in this document have been updated to reflect the new structure.
+> Build: `pnpm build` (Turborepo) | Test: `pnpm test` | Lint: `pnpm lint` (Biome.js)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add LLM integration to Marvis, making it a functional AI assistant that responds to prompts via cloud providers.
@@ -15,14 +24,14 @@
 ### Task 1.1: Add Configuration Module
 
 **Files:**
-- Create: `src/core/config.ts`
-- Modify: `src/types/index.ts`
-- Test: `tests/core/config.test.ts`
+- Create: `packages/core/src/core/config.ts`
+- Modify: `packages/core/src/types/index.ts`
+- Test: `packages/core/tests/core/config.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/core/config.test.ts
+// packages/core/tests/core/config.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { loadConfig, DEFAULT_CONFIG, type MarvisConfig } from "../src/core/config.js";
 
@@ -62,13 +71,13 @@ describe("Config", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --run tests/core/config.test.ts`
+Run: `pnpm test -- --run packages/core/tests/core/config.test.ts`
 Expected: FAIL with "Cannot find module '../src/core/config.js'"
 
 **Step 3: Write implementation**
 
 ```typescript
-// src/core/config.ts
+// packages/core/src/core/config.ts
 export interface MarvisConfig {
   llm: {
     provider: "openai" | "anthropic" | "google";
@@ -128,13 +137,13 @@ export function loadConfig(): MarvisConfig {
 
 **Step 4: Run test to verify it passes**
 
-Run: `npm test -- --run tests/core/config.test.ts`
+Run: `pnpm test -- --run packages/core/tests/core/config.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add src/core/config.ts tests/core/config.test.ts
+git add packages/core/src/core/config.ts packages/core/tests/core/config.test.ts
 git commit -m "feat: add configuration module with env var overrides"
 ```
 
@@ -143,11 +152,11 @@ git commit -m "feat: add configuration module with env var overrides"
 ### Task 1.2: Extend Types for Streaming IPC
 
 **Files:**
-- Modify: `src/types/index.ts`
+- Modify: `packages/core/src/types/index.ts`
 
 **Step 1: Add new IPC types**
 
-Add to `src/types/index.ts`:
+Add to `packages/core/src/types/index.ts`:
 
 ```typescript
 // Add to IPCRequestType
@@ -186,13 +195,13 @@ export interface DaemonConfig {
 
 **Step 2: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 3: Commit**
 
 ```bash
-git add src/types/index.ts
+git add packages/core/src/types/index.ts
 git commit -m "feat: add streaming IPC types and config to DaemonConfig"
 ```
 
@@ -201,13 +210,13 @@ git commit -m "feat: add streaming IPC types and config to DaemonConfig"
 ### Task 1.3: Add Danger Level to AgentTool
 
 **Files:**
-- Modify: `src/plugins/plugin.ts`
-- Modify: `src/plugins/shell/tools.ts`
-- Modify: `tests/plugins/plugin.test.ts`
+- Modify: `packages/core/src/plugins/plugin.ts`
+- Modify: `packages/plugin-shell/src/tools.ts`
+- Modify: `packages/core/tests/plugins/plugin.test.ts`
 
 **Step 1: Update AgentTool interface**
 
-In `src/plugins/plugin.ts`, update:
+In `packages/core/src/plugins/plugin.ts`, update:
 
 ```typescript
 export type DangerLevel = "safe" | "moderate" | "dangerous";
@@ -223,7 +232,7 @@ export interface AgentTool {
 
 **Step 2: Add danger levels to shell tools**
 
-In `src/plugins/shell/tools.ts`, update:
+In `packages/plugin-shell/src/tools.ts`, update:
 
 ```typescript
 export function createExecuteCommandTool(): AgentTool {
@@ -253,7 +262,7 @@ export function createGetEnvTool(): AgentTool {
 
 **Step 3: Update test**
 
-Add to `tests/plugins/plugin.test.ts`:
+Add to `packages/core/tests/plugins/plugin.test.ts`:
 
 ```typescript
 it("should have danger level on tools", () => {
@@ -270,13 +279,13 @@ it("should have danger level on tools", () => {
 
 **Step 4: Run tests**
 
-Run: `npm test -- --run`
+Run: `pnpm test -- --run`
 Expected: All tests pass
 
 **Step 5: Commit**
 
 ```bash
-git add src/plugins/plugin.ts src/plugins/shell/tools.ts tests/plugins/plugin.test.ts
+git add packages/core/src/plugins/plugin.ts packages/plugin-shell/src/tools.ts packages/core/tests/plugins/plugin.test.ts
 git commit -m "feat: add danger level to AgentTool interface"
 ```
 
@@ -287,13 +296,13 @@ git commit -m "feat: add danger level to AgentTool interface"
 ### Task 2.1: Create MarvisAgent Class
 
 **Files:**
-- Create: `src/core/marvis.ts`
-- Create: `tests/core/marvis.test.ts`
+- Create: `packages/core/src/core/marvis.ts`
+- Create: `packages/core/tests/core/marvis.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/core/marvis.test.ts
+// packages/core/tests/core/marvis.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock Pi framework modules
@@ -374,13 +383,13 @@ describe("MarvisAgent", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --run tests/core/marvis.test.ts`
+Run: `pnpm test -- --run packages/core/tests/core/marvis.test.ts`
 Expected: FAIL with "Cannot find module '../src/core/marvis.js'"
 
 **Step 3: Write implementation**
 
 ```typescript
-// src/core/marvis.ts
+// packages/core/src/core/marvis.ts
 import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import type { PluginManager } from "../plugins/manager.js";
@@ -534,13 +543,13 @@ export class MarvisAgent {
 
 **Step 4: Run test to verify it passes**
 
-Run: `npm test -- --run tests/core/marvis.test.ts`
+Run: `pnpm test -- --run packages/core/tests/core/marvis.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add src/core/marvis.ts tests/core/marvis.test.ts
+git add packages/core/src/core/marvis.ts packages/core/tests/core/marvis.test.ts
 git commit -m "feat: add MarvisAgent class wrapping Pi Agent"
 ```
 
@@ -549,13 +558,13 @@ git commit -m "feat: add MarvisAgent class wrapping Pi Agent"
 ### Task 2.2: Add Core Module Barrel Export
 
 **Files:**
-- Create: `src/core/index.ts`
-- Modify: `src/index.ts`
+- Create: `packages/core/src/core/index.ts`
+- Modify: `packages/core/src/index.ts`
 
 **Step 1: Create barrel export**
 
 ```typescript
-// src/core/index.ts
+// packages/core/src/core/index.ts
 export * from "./config.js";
 export * from "./marvis.js";
 export * from "./memory/index.js";
@@ -563,10 +572,10 @@ export * from "./memory/index.js";
 
 **Step 2: Update main index**
 
-Update `src/index.ts`:
+Update `packages/core/src/index.ts`:
 
 ```typescript
-// src/index.ts
+// packages/core/src/index.ts
 // Types
 export * from "./types/index.js";
 
@@ -578,21 +587,17 @@ export * from "./daemon/index.js";
 
 // Plugins
 export * from "./plugins/index.js";
-export { ShellPlugin } from "./plugins/shell/index.js";
-
-// CLI
-export * from "./cli/index.js";
 ```
 
 **Step 3: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 4: Commit**
 
 ```bash
-git add src/core/index.ts src/index.ts
+git add packages/core/src/core/index.ts packages/core/src/index.ts
 git commit -m "feat: add core module exports"
 ```
 
@@ -603,12 +608,12 @@ git commit -m "feat: add core module exports"
 ### Task 3.1: Add Streaming to IPCClient
 
 **Files:**
-- Modify: `src/daemon/ipc-client.ts`
-- Modify: `tests/daemon/ipc-server.test.ts`
+- Modify: `packages/core/src/daemon/ipc-client.ts`
+- Modify: `packages/core/tests/daemon/ipc-server.test.ts`
 
 **Step 1: Add streamRequest method to IPCClient**
 
-In `src/daemon/ipc-client.ts`, add:
+In `packages/core/src/daemon/ipc-client.ts`, add:
 
 ```typescript
 async streamRequest(
@@ -659,13 +664,13 @@ async streamRequest(
 
 **Step 2: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 3: Commit**
 
 ```bash
-git add src/daemon/ipc-client.ts
+git add packages/core/src/daemon/ipc-client.ts
 git commit -m "feat: add streaming support to IPCClient"
 ```
 
@@ -674,11 +679,11 @@ git commit -m "feat: add streaming support to IPCClient"
 ### Task 3.2: Add Streaming to IPCServer
 
 **Files:**
-- Modify: `src/daemon/ipc-server.ts`
+- Modify: `packages/core/src/daemon/ipc-server.ts`
 
 **Step 1: Add stream method**
 
-In `src/daemon/ipc-server.ts`, add a method to send stream chunks:
+In `packages/core/src/daemon/ipc-server.ts`, add a method to send stream chunks:
 
 ```typescript
 // Add to IPCServer class
@@ -720,13 +725,13 @@ private handleConnection(socket: net.Socket): void {
 
 **Step 4: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 5: Commit**
 
 ```bash
-git add src/daemon/ipc-server.ts
+git add packages/core/src/daemon/ipc-server.ts
 git commit -m "feat: add streaming support to IPCServer"
 ```
 
@@ -737,12 +742,12 @@ git commit -m "feat: add streaming support to IPCServer"
 ### Task 4.1: Integrate MarvisAgent into Daemon
 
 **Files:**
-- Modify: `src/daemon/daemon.ts`
-- Modify: `tests/daemon/daemon.test.ts`
+- Modify: `packages/core/src/daemon/daemon.ts`
+- Modify: `packages/core/tests/daemon/daemon.test.ts`
 
 **Step 1: Update daemon to create MarvisAgent**
 
-In `src/daemon/daemon.ts`:
+In `packages/core/src/daemon/daemon.ts`:
 
 1. Import MarvisAgent and loadConfig
 2. Add `marvisAgent` private field
@@ -819,13 +824,13 @@ private async handleRequest(
 
 **Step 4: Run tests**
 
-Run: `npm test -- --run tests/daemon/daemon.test.ts`
+Run: `pnpm test -- --run packages/core/tests/daemon/daemon.test.ts`
 Expected: Tests pass (may need to mock Pi framework)
 
 **Step 5: Commit**
 
 ```bash
-git add src/daemon/daemon.ts tests/daemon/daemon.test.ts
+git add packages/core/src/daemon/daemon.ts packages/core/tests/daemon/daemon.test.ts
 git commit -m "feat: integrate MarvisAgent into daemon with streaming"
 ```
 
@@ -836,13 +841,13 @@ git commit -m "feat: integrate MarvisAgent into daemon with streaming"
 ### Task 5.1: Create REPL Module
 
 **Files:**
-- Create: `src/cli/repl.ts`
-- Create: `tests/cli/repl.test.ts`
+- Create: `apps/cli/src/cli/repl.ts`
+- Create: `apps/cli/tests/cli/repl.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/cli/repl.test.ts
+// apps/cli/tests/cli/repl.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { parseCommand } from "../src/cli/repl.js";
 
@@ -868,16 +873,16 @@ describe("REPL", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --run tests/cli/repl.test.ts`
+Run: `pnpm test -- --run apps/cli/tests/cli/repl.test.ts`
 Expected: FAIL
 
 **Step 3: Write implementation**
 
 ```typescript
-// src/cli/repl.ts
+// apps/cli/src/cli/repl.ts
 import * as readline from "readline";
-import { IPCClient } from "../daemon/ipc-client.js";
-import type { IPCStreamChunk } from "../types/index.js";
+import { IPCClient } from "@marvis/core";
+import type { IPCStreamChunk } from "@marvis/core";
 
 export interface ParsedCommand {
   command: string;
@@ -1044,13 +1049,13 @@ Commands:
 
 **Step 4: Run test to verify it passes**
 
-Run: `npm test -- --run tests/cli/repl.test.ts`
+Run: `pnpm test -- --run apps/cli/tests/cli/repl.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add src/cli/repl.ts tests/cli/repl.test.ts
+git add apps/cli/src/cli/repl.ts apps/cli/tests/cli/repl.test.ts
 git commit -m "feat: add REPL module with streaming support"
 ```
 
@@ -1059,12 +1064,12 @@ git commit -m "feat: add REPL module with streaming support"
 ### Task 5.2: Add Chat Command to CLI
 
 **Files:**
-- Modify: `src/cli/cli.ts`
-- Modify: `src/cli/index.ts`
+- Modify: `apps/cli/src/cli/cli.ts`
+- Modify: `apps/cli/src/cli/index.ts`
 
 **Step 1: Add chat command**
 
-In `src/cli/cli.ts`, add:
+In `apps/cli/src/cli/cli.ts`, add:
 
 ```typescript
 import { MarvisREPL } from "./repl.js";
@@ -1100,7 +1105,7 @@ program
 
 **Step 2: Update barrel export**
 
-In `src/cli/index.ts`:
+In `apps/cli/src/cli/index.ts`:
 
 ```typescript
 export * from "./cli.js";
@@ -1109,13 +1114,13 @@ export * from "./repl.js";
 
 **Step 3: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 4: Commit**
 
 ```bash
-git add src/cli/cli.ts src/cli/index.ts
+git add apps/cli/src/cli/cli.ts apps/cli/src/cli/index.ts
 git commit -m "feat: add chat command to CLI for REPL mode"
 ```
 
@@ -1126,12 +1131,12 @@ git commit -m "feat: add chat command to CLI for REPL mode"
 ### Task 6.1: Update Daemon Exports
 
 **Files:**
-- Modify: `src/daemon/index.ts`
+- Modify: `packages/core/src/daemon/index.ts`
 
 **Step 1: Ensure all daemon exports**
 
 ```typescript
-// src/daemon/index.ts
+// packages/core/src/daemon/index.ts
 export * from "./daemon.js";
 export * from "./ipc-server.js";
 export * from "./ipc-client.js";
@@ -1140,18 +1145,18 @@ export * from "./logger.js";
 
 **Step 2: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 3: Run all tests**
 
-Run: `npm test -- --run`
+Run: `pnpm test -- --run`
 Expected: All tests pass
 
 **Step 4: Commit**
 
 ```bash
-git add src/daemon/index.ts
+git add packages/core/src/daemon/index.ts
 git commit -m "feat: finalize daemon exports for V2"
 ```
 
@@ -1161,17 +1166,17 @@ git commit -m "feat: finalize daemon exports for V2"
 
 **Step 1: Build project**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 2: Start daemon in foreground**
 
-Run: `node dist/bin/marvis.js start --foreground`
+Run: `node apps/cli/dist/bin/marvis.js start --foreground`
 Expected: "Marvis daemon started successfully"
 
 **Step 3: In another terminal, start chat**
 
-Run: `node dist/bin/marvis.js chat`
+Run: `node apps/cli/dist/bin/marvis.js chat`
 Expected: "Marvis REPL started. Type /help for commands..."
 
 **Step 4: Test basic prompt**
@@ -1191,7 +1196,7 @@ Expected: "Goodbye!" and exit
 
 **Step 7: Stop daemon**
 
-Run: `node dist/bin/marvis.js stop`
+Run: `node apps/cli/dist/bin/marvis.js stop`
 Expected: "Marvis daemon stopped"
 
 ---
@@ -1210,7 +1215,7 @@ Add to README.md:
 
 ```bash
 # Start interactive chat (daemon must be running)
-npm run cli -- chat
+pnpm cli chat
 
 # Or after global install
 marvis chat

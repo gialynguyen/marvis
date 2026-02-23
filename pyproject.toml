@@ -1,0 +1,14 @@
+
+[project]
+name = "marvis"
+version = "0.1.0"
+description = "Personal AI assistant daemon with plugin architecture"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+# This is the workspace root — no actual package to build
+package = false
+
+[tool.uv.workspace]
+members = ["packages/py-*"]

@@ -1,0 +1,30 @@
+{
+  "name": "@marvis/plugin-trading",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsdown && cp -r src/web/static dist/web/static",
+    "lint": "biome lint src/",
+    "lint:unsafe": "biome lint src/ --write --unsafe",
+    "format": "biome format src/ --write",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@marvis/core": "workspace:*",
+    "@sinclair/typebox": "^0.34.11",
+    "hono": "^4.7.6",
+    "@hono/node-server": "^1.14.1",
+    "@hono/node-ws": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsdown": "^0.21.0-beta.2",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.8"
+  }
+}

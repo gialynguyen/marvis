@@ -1,5 +1,14 @@
 # Marvis V2 Design: LLM Integration
 
+> **⚠️ Post-Migration Note (2026-02-27):** This document was written before the monorepo migration.
+> The project has been restructured from a flat `src/` layout into a pnpm monorepo with:
+> - `packages/core/` (@marvis/core) — Core logic, daemon, memory, plugin system, types
+> - `packages/plugin-shell/` (@marvis/plugin-shell) — Shell command plugin
+> - `apps/cli/` (@marvis/cli) — CLI interface
+>
+> All file paths, import paths, and build commands in this document have been updated to reflect the new structure.
+> Build: `pnpm build` (Turborepo) | Test: `pnpm test` | Lint: `pnpm lint` (Biome.js)
+
 **Date**: 2026-02-23  
 **Status**: Approved  
 **Author**: AI-assisted design session
@@ -79,7 +88,7 @@ V2 adds the "brain" to Marvis — LLM integration that makes the assistant actua
 
 ## Section 2: MarvisAgent Class
 
-New file: `src/core/marvis.ts`
+New file: `packages/core/src/core/marvis.ts`
 
 ```typescript
 import { Agent, AgentTool as PiAgentTool } from "@mariozechner/pi-agent-core";
@@ -243,7 +252,7 @@ export class MarvisAgent {
 Extend `AgentTool` interface to include danger level:
 
 ```typescript
-// src/plugins/plugin.ts
+// packages/core/src/plugins/plugin.ts
 export interface AgentTool {
   name: string;
   description: string;
@@ -276,11 +285,11 @@ export interface AgentTool {
 
 ## Section 4: REPL Interface
 
-New file: `src/cli/repl.ts`
+New file: `apps/cli/src/cli/repl.ts`
 
 ```typescript
 import * as readline from "readline";
-import { IPCClient } from "../daemon/ipc-client.js";
+import { IPCClient } from "@marvis/core/daemon/ipc-client.js";
 
 export class MarvisREPL {
   private rl!: readline.Interface;
@@ -429,7 +438,7 @@ Commands:
 New request types for V2:
 
 ```typescript
-// src/types/index.ts
+// packages/core/src/types/index.ts
 export type IPCRequestType =
   | "prompt"           // Send message, get streaming response
   | "abort"            // Cancel current operation
@@ -479,7 +488,7 @@ Server → Client: { type: "done" }
 
 ## Section 6: Configuration
 
-New file: `src/core/config.ts`
+New file: `packages/core/src/core/config.ts`
 
 ```typescript
 export interface MarvisConfig {
@@ -538,21 +547,21 @@ MARVIS_MODEL="claude-sonnet-4-0"
 
 | File | Purpose |
 |------|---------|
-| `src/core/marvis.ts` | MarvisAgent class |
-| `src/core/config.ts` | Configuration types and defaults |
-| `src/cli/repl.ts` | Interactive REPL |
+| `packages/core/src/core/marvis.ts` | MarvisAgent class |
+| `packages/core/src/core/config.ts` | Configuration types and defaults |
+| `apps/cli/src/cli/repl.ts` | Interactive REPL |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/types/index.ts` | Add new IPC types, stream chunk types |
-| `src/plugins/plugin.ts` | Add `dangerLevel` to AgentTool |
-| `src/plugins/shell/tools.ts` | Add danger levels to shell tools |
-| `src/daemon/daemon.ts` | Integrate MarvisAgent, handle new IPC requests |
-| `src/daemon/ipc-server.ts` | Add streaming support |
-| `src/daemon/ipc-client.ts` | Add streaming support |
-| `src/cli/cli.ts` | Add `chat` command for REPL |
+| `packages/core/src/types/index.ts` | Add new IPC types, stream chunk types |
+| `packages/core/src/plugins/plugin.ts` | Add `dangerLevel` to AgentTool |
+| `packages/plugin-shell/src/tools.ts` | Add danger levels to shell tools |
+| `packages/core/src/daemon/daemon.ts` | Integrate MarvisAgent, handle new IPC requests |
+| `packages/core/src/daemon/ipc-server.ts` | Add streaming support |
+| `packages/core/src/daemon/ipc-client.ts` | Add streaming support |
+| `apps/cli/src/cli/cli.ts` | Add `chat` command for REPL |
 
 ---
 
@@ -560,18 +569,18 @@ MARVIS_MODEL="claude-sonnet-4-0"
 
 ### Unit Tests
 
-- `tests/core/marvis.test.ts` — MarvisAgent with mocked Pi Agent
-- `tests/cli/repl.test.ts` — REPL command parsing
+- `packages/core/tests/core/marvis.test.ts` — MarvisAgent with mocked Pi Agent
+- `apps/cli/tests/cli/repl.test.ts` — REPL command parsing
 
 ### Integration Tests
 
-- `tests/integration/prompt.test.ts` — Full prompt flow (daemon → agent → response)
-- `tests/integration/confirmation.test.ts` — Tool confirmation flow
+- `packages/core/tests/integration/prompt.test.ts` — Full prompt flow (daemon → agent → response)
+- `packages/core/tests/integration/confirmation.test.ts` — Tool confirmation flow
 
 ### Manual Testing
 
-1. Start daemon: `npm run cli -- start`
-2. Start REPL: `npm run cli -- chat`
+1. Start daemon: `pnpm run cli start`
+2. Start REPL: `pnpm run cli chat`
 3. Test basic prompt: "Hello, who are you?"
 4. Test tool use: "What's my current directory?"
 5. Test dangerous tool: "Run ls -la" (should prompt for confirmation)

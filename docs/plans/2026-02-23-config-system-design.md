@@ -1,5 +1,14 @@
 # Marvis Configuration System Design
 
+> **⚠️ Post-Migration Note (2026-02-27):** This document was written before the monorepo migration.
+> The project has been restructured from a flat `src/` layout into a pnpm monorepo with:
+> - `packages/core/` (@marvis/core) — Core logic, daemon, memory, plugin system, types
+> - `packages/plugin-shell/` (@marvis/plugin-shell) — Shell command plugin
+> - `apps/cli/` (@marvis/cli) — CLI interface
+>
+> All file paths, import paths, and build commands in this document have been updated to reflect the new structure.
+> Build: `pnpm build` (Turborepo) | Test: `pnpm test` | Lint: `pnpm lint` (Biome.js)
+
 **Date:** 2026-02-23  
 **Status:** Approved  
 **Author:** Sisyphus + User collaboration
@@ -72,7 +81,7 @@ format = "text"                  # "text" | "json"
 ### Expanded MarvisConfig Interface
 
 ```typescript
-// src/types/index.ts
+// packages/core/src/types/index.ts
 
 export interface MarvisConfig {
   llm: {
@@ -106,7 +115,7 @@ export interface MarvisConfig {
 ### TypeBox Schema for Validation
 
 ```typescript
-// src/core/config-schema.ts
+// packages/core/src/core/config-schema.ts
 import { Type, Static } from "@sinclair/typebox";
 
 export const MarvisConfigSchema = Type.Object({
@@ -181,7 +190,7 @@ export type MarvisConfigFromSchema = Static<typeof MarvisConfigSchema>;
 ### Key Functions
 
 ```typescript
-// src/core/config.ts
+// packages/core/src/core/config.ts
 
 // Public API
 export function loadConfig(cliArgs?: Partial<CliConfigArgs>): MarvisConfig;

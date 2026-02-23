@@ -1,5 +1,14 @@
 # Marvis Implementation Plan
 
+> **⚠️ Post-Migration Note (2026-02-27):** This document was written before the monorepo migration. 
+> The project has been restructured from a flat `src/` layout into a pnpm monorepo with:
+> - `packages/core/` (@marvis/core) — Core logic, daemon, memory, plugin system, types
+> - `packages/plugin-shell/` (@marvis/plugin-shell) — Shell command plugin
+> - `apps/cli/` (@marvis/cli) — CLI interface
+> 
+> All file paths, import paths, and build commands in this document have been updated to reflect the new structure.
+> Build: `pnpm build` (Turborepo) | Test: `pnpm test` | Lint: `pnpm lint` (Biome.js)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build Marvis, a personal AI assistant daemon with plugin architecture, CLI interface, and persistent memory using the Pi agent framework.
@@ -18,8 +27,8 @@
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `.gitignore`
-- Create: `src/index.ts`
-- Create: `src/types/index.ts`
+- Create: `packages/core/src/index.ts`
+- Create: `packages/core/src/types/index.ts`
 
 **Step 1: Create package.json**
 
@@ -37,12 +46,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/bin/marvis-daemon.ts",
+    "dev": "tsx watch packages/core/src/bin/marvis-daemon.ts",
     "start": "node dist/bin/marvis-daemon.js",
-    "cli": "tsx src/bin/marvis.ts",
+    "cli": "tsx apps/cli/src/bin/marvis.ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "lint": "eslint src --ext .ts",
+    "lint": "biome check src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -58,9 +67,9 @@
     "typescript": "^5.4.0",
     "tsx": "^4.0.0",
     "vitest": "^1.0.0",
-    "eslint": "^8.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0"
+    
+    
+    
   },
   "engines": {
     "node": ">=20.0.0"
@@ -108,10 +117,10 @@ data/
 *.pid
 ```
 
-**Step 4: Create src/types/index.ts with core types**
+**Step 4: Create packages/core/src/types/index.ts with core types**
 
 ```typescript
-// src/types/index.ts
+// packages/core/src/types/index.ts
 import { Type, Static } from "@sinclair/typebox";
 
 // ============= Plugin Types =============
@@ -231,22 +240,22 @@ export interface DaemonStatus {
 }
 ```
 
-**Step 5: Create src/index.ts**
+**Step 5: Create packages/core/src/index.ts**
 
 ```typescript
-// src/index.ts
+// packages/core/src/index.ts
 // Library exports
 export * from "./types/index.js";
 ```
 
 **Step 6: Install dependencies**
 
-Run: `npm install`
+Run: `pnpm install`
 Expected: Dependencies installed successfully
 
 **Step 7: Verify TypeScript compiles**
 
-Run: `npm run typecheck`
+Run: `pnpm typecheck`
 Expected: No errors
 
 **Step 8: Commit**
@@ -261,14 +270,14 @@ git commit -m "chore: initialize project with TypeScript config and core types"
 ### Task 1.2: Create Logger Utility
 
 **Files:**
-- Create: `src/daemon/logger.ts`
-- Create: `src/daemon/index.ts`
-- Create: `tests/daemon/logger.test.ts`
+- Create: `packages/core/src/daemon/logger.ts`
+- Create: `packages/core/src/daemon/index.ts`
+- Create: `packages/core/tests/daemon/logger.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/daemon/logger.test.ts
+// packages/core/tests/daemon/logger.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createLogger, Logger, LogLevel } from "../../src/daemon/logger.js";
 import * as fs from "fs";
@@ -316,13 +325,13 @@ describe("Logger", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/daemon/logger.test.ts`
+Run: `pnpm test -- packages/core/tests/daemon/logger.test.ts`
 Expected: FAIL with "Cannot find module"
 
 **Step 3: Write minimal implementation**
 
 ```typescript
-// src/daemon/logger.ts
+// packages/core/src/daemon/logger.ts
 import * as fs from "fs";
 import * as path from "path";
 
@@ -391,19 +400,19 @@ export function createLogger(name: string, logFile?: string): Logger {
 **Step 4: Create barrel export**
 
 ```typescript
-// src/daemon/index.ts
+// packages/core/src/daemon/index.ts
 export * from "./logger.js";
 ```
 
 **Step 5: Run test to verify it passes**
 
-Run: `npm test -- tests/daemon/logger.test.ts`
+Run: `pnpm test -- packages/core/tests/daemon/logger.test.ts`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add src/daemon/ tests/daemon/
+git add packages/core/src/daemon/ packages/core/tests/daemon/
 git commit -m "feat: add logger utility with file and console output"
 ```
 
@@ -412,15 +421,15 @@ git commit -m "feat: add logger utility with file and console output"
 ### Task 1.3: Create MemoryStore with SQLite
 
 **Files:**
-- Create: `src/core/memory/store.ts`
-- Create: `src/core/memory/types.ts`
-- Create: `src/core/memory/index.ts`
-- Create: `tests/core/memory/store.test.ts`
+- Create: `packages/core/src/core/memory/store.ts`
+- Create: `packages/core/src/core/memory/types.ts`
+- Create: `packages/core/src/core/memory/index.ts`
+- Create: `packages/core/tests/core/memory/store.test.ts`
 
 **Step 1: Write the failing test for conversation management**
 
 ```typescript
-// tests/core/memory/store.test.ts
+// packages/core/tests/core/memory/store.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MemoryStore } from "../../../src/core/memory/store.js";
 import * as fs from "fs";
@@ -522,13 +531,13 @@ describe("MemoryStore", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/core/memory/store.test.ts`
+Run: `pnpm test -- packages/core/tests/core/memory/store.test.ts`
 Expected: FAIL with "Cannot find module"
 
 **Step 3: Write minimal implementation**
 
 ```typescript
-// src/core/memory/types.ts
+// packages/core/src/core/memory/types.ts
 export interface ChatMessageInput {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
@@ -538,7 +547,7 @@ export interface ChatMessageInput {
 ```
 
 ```typescript
-// src/core/memory/store.ts
+// packages/core/src/core/memory/store.ts
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
@@ -763,7 +772,7 @@ export class MemoryStore {
 ```
 
 ```typescript
-// src/core/memory/index.ts
+// packages/core/src/core/memory/index.ts
 export * from "./store.js";
 export * from "./types.js";
 ```
@@ -784,13 +793,13 @@ export default defineConfig({
 
 **Step 5: Run test to verify it passes**
 
-Run: `npm test -- tests/core/memory/store.test.ts`
+Run: `pnpm test -- packages/core/tests/core/memory/store.test.ts`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add src/core/ tests/core/ vitest.config.ts
+git add packages/core/src/core/ packages/core/tests/core/ vitest.config.ts
 git commit -m "feat: add MemoryStore with SQLite for conversation persistence"
 ```
 
@@ -799,14 +808,14 @@ git commit -m "feat: add MemoryStore with SQLite for conversation persistence"
 ### Task 1.4: Create ContextManager
 
 **Files:**
-- Create: `src/core/memory/context.ts`
-- Modify: `src/core/memory/index.ts`
-- Create: `tests/core/memory/context.test.ts`
+- Create: `packages/core/src/core/memory/context.ts`
+- Modify: `packages/core/src/core/memory/index.ts`
+- Create: `packages/core/tests/core/memory/context.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/core/memory/context.test.ts
+// packages/core/tests/core/memory/context.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ContextManager } from "../../../src/core/memory/context.js";
 import { MemoryStore } from "../../../src/core/memory/store.js";
@@ -867,13 +876,13 @@ describe("ContextManager", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/core/memory/context.test.ts`
+Run: `pnpm test -- packages/core/tests/core/memory/context.test.ts`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
 
 ```typescript
-// src/core/memory/context.ts
+// packages/core/src/core/memory/context.ts
 import type { StoredMessage } from "../../types/index.js";
 import type { MemoryStore } from "./store.js";
 
@@ -934,7 +943,7 @@ export class ContextManager {
 **Step 4: Update barrel export**
 
 ```typescript
-// src/core/memory/index.ts
+// packages/core/src/core/memory/index.ts
 export * from "./store.js";
 export * from "./types.js";
 export * from "./context.js";
@@ -942,13 +951,13 @@ export * from "./context.js";
 
 **Step 5: Run test to verify it passes**
 
-Run: `npm test -- tests/core/memory/context.test.ts`
+Run: `pnpm test -- packages/core/tests/core/memory/context.test.ts`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add src/core/memory/ tests/core/memory/
+git add packages/core/src/core/memory/ packages/core/tests/core/memory/
 git commit -m "feat: add ContextManager for conversation history windowing"
 ```
 
@@ -959,14 +968,14 @@ git commit -m "feat: add ContextManager for conversation history windowing"
 ### Task 2.1: Create Plugin Interface and BasePlugin
 
 **Files:**
-- Create: `src/plugins/plugin.ts`
-- Create: `src/plugins/index.ts`
-- Create: `tests/plugins/plugin.test.ts`
+- Create: `packages/core/src/plugins/plugin.ts`
+- Create: `packages/core/src/plugins/index.ts`
+- Create: `packages/core/tests/plugins/plugin.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/plugins/plugin.test.ts
+// packages/core/tests/plugins/plugin.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { BasePlugin, type Plugin, type PluginManifest } from "../../src/plugins/plugin.js";
 
@@ -1043,13 +1052,13 @@ describe("BasePlugin", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/plugins/plugin.test.ts`
+Run: `pnpm test -- packages/core/tests/plugins/plugin.test.ts`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
 
 ```typescript
-// src/plugins/plugin.ts
+// packages/core/src/plugins/plugin.ts
 import type { PluginManifest, PluginHealthCheck, PluginMode } from "../types/index.js";
 import { createLogger, type Logger } from "../daemon/logger.js";
 
@@ -1126,19 +1135,19 @@ export abstract class BasePlugin implements Plugin {
 **Step 4: Create barrel export**
 
 ```typescript
-// src/plugins/index.ts
+// packages/core/src/plugins/index.ts
 export * from "./plugin.js";
 ```
 
 **Step 5: Run test to verify it passes**
 
-Run: `npm test -- tests/plugins/plugin.test.ts`
+Run: `pnpm test -- packages/core/tests/plugins/plugin.test.ts`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add src/plugins/ tests/plugins/
+git add packages/core/src/plugins/ packages/core/tests/plugins/
 git commit -m "feat: add Plugin interface and BasePlugin abstract class"
 ```
 
@@ -1147,14 +1156,14 @@ git commit -m "feat: add Plugin interface and BasePlugin abstract class"
 ### Task 2.2: Create PluginManager
 
 **Files:**
-- Create: `src/plugins/manager.ts`
-- Modify: `src/plugins/index.ts`
-- Create: `tests/plugins/manager.test.ts`
+- Create: `packages/core/src/plugins/manager.ts`
+- Modify: `packages/core/src/plugins/index.ts`
+- Create: `packages/core/tests/plugins/manager.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/plugins/manager.test.ts
+// packages/core/tests/plugins/manager.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { PluginManager } from "../../src/plugins/manager.js";
 import { BasePlugin, type PluginManifest, type AgentTool } from "../../src/plugins/plugin.js";
@@ -1254,13 +1263,13 @@ describe("PluginManager", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/plugins/manager.test.ts`
+Run: `pnpm test -- packages/core/tests/plugins/manager.test.ts`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
 
 ```typescript
-// src/plugins/manager.ts
+// packages/core/src/plugins/manager.ts
 import type { Plugin, AgentTool, Agent } from "./plugin.js";
 import { createLogger, type Logger } from "../daemon/logger.js";
 
@@ -1406,20 +1415,20 @@ export class PluginManager {
 **Step 4: Update barrel export**
 
 ```typescript
-// src/plugins/index.ts
+// packages/core/src/plugins/index.ts
 export * from "./plugin.js";
 export * from "./manager.js";
 ```
 
 **Step 5: Run test to verify it passes**
 
-Run: `npm test -- tests/plugins/manager.test.ts`
+Run: `pnpm test -- packages/core/tests/plugins/manager.test.ts`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add src/plugins/ tests/plugins/
+git add packages/core/src/plugins/ packages/core/tests/plugins/
 git commit -m "feat: add PluginManager for plugin lifecycle and tool collection"
 ```
 
@@ -1428,14 +1437,14 @@ git commit -m "feat: add PluginManager for plugin lifecycle and tool collection"
 ### Task 2.3: Create Shell Plugin
 
 **Files:**
-- Create: `src/plugins/shell/index.ts`
-- Create: `src/plugins/shell/tools.ts`
-- Create: `tests/plugins/shell/shell.test.ts`
+- Create: `packages/plugin-shell/src/index.ts`
+- Create: `packages/plugin-shell/src/tools.ts`
+- Create: `packages/plugin-shell/tests/shell.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/plugins/shell/shell.test.ts
+// packages/plugin-shell/tests/shell.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ShellPlugin } from "../../../src/plugins/shell/index.js";
 
@@ -1507,13 +1516,13 @@ describe("ShellPlugin", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/plugins/shell/shell.test.ts`
+Run: `pnpm test -- packages/plugin-shell/tests/shell.test.ts`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
 
 ```typescript
-// src/plugins/shell/tools.ts
+// packages/plugin-shell/src/tools.ts
 import { exec } from "child_process";
 import { promisify } from "util";
 
@@ -1571,7 +1580,7 @@ export function getEnvVar(name: string): string | null {
 ```
 
 ```typescript
-// src/plugins/shell/index.ts
+// packages/plugin-shell/src/index.ts
 import { Type } from "@sinclair/typebox";
 import { BasePlugin, type PluginManifest, type AgentTool } from "../plugin.js";
 import { executeCommand, getEnvVar } from "./tools.js";
@@ -1647,13 +1656,13 @@ You can execute shell commands on the user's macOS system.
 
 **Step 4: Run test to verify it passes**
 
-Run: `npm test -- tests/plugins/shell/shell.test.ts`
+Run: `pnpm test -- packages/plugin-shell/tests/shell.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add src/plugins/shell/ tests/plugins/shell/
+git add packages/plugin-shell/src/ packages/plugin-shell/tests/
 git commit -m "feat: add ShellPlugin with execute_command and get_env tools"
 ```
 
@@ -1664,14 +1673,14 @@ git commit -m "feat: add ShellPlugin with execute_command and get_env tools"
 ### Task 3.1: Create IPCServer
 
 **Files:**
-- Create: `src/daemon/ipc-server.ts`
-- Modify: `src/daemon/index.ts`
-- Create: `tests/daemon/ipc-server.test.ts`
+- Create: `packages/core/src/daemon/ipc-server.ts`
+- Modify: `packages/core/src/daemon/index.ts`
+- Create: `packages/core/tests/daemon/ipc-server.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/daemon/ipc-server.test.ts
+// packages/core/tests/daemon/ipc-server.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { IPCServer } from "../../src/daemon/ipc-server.js";
 import { IPCClient } from "../../src/daemon/ipc-client.js";
@@ -1737,13 +1746,13 @@ describe("IPCServer", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/daemon/ipc-server.test.ts`
+Run: `pnpm test -- packages/core/tests/daemon/ipc-server.test.ts`
 Expected: FAIL
 
 **Step 3: Write IPC Server implementation**
 
 ```typescript
-// src/daemon/ipc-server.ts
+// packages/core/src/daemon/ipc-server.ts
 import { createServer, Server, Socket } from "net";
 import { unlinkSync, existsSync, chmodSync } from "fs";
 import * as path from "path";
@@ -1873,7 +1882,7 @@ export class IPCServer {
 **Step 4: Write IPC Client implementation**
 
 ```typescript
-// src/daemon/ipc-client.ts
+// packages/core/src/daemon/ipc-client.ts
 import { createConnection, Socket } from "net";
 import { randomUUID } from "crypto";
 import type { IPCRequest, IPCResponse, IPCRequestType } from "../types/index.js";
@@ -2000,7 +2009,7 @@ export class IPCClient {
 **Step 5: Update barrel export**
 
 ```typescript
-// src/daemon/index.ts
+// packages/core/src/daemon/index.ts
 export * from "./logger.js";
 export * from "./ipc-server.js";
 export * from "./ipc-client.js";
@@ -2008,13 +2017,13 @@ export * from "./ipc-client.js";
 
 **Step 6: Run test to verify it passes**
 
-Run: `npm test -- tests/daemon/ipc-server.test.ts`
+Run: `pnpm test -- packages/core/tests/daemon/ipc-server.test.ts`
 Expected: PASS
 
 **Step 7: Commit**
 
 ```bash
-git add src/daemon/ tests/daemon/
+git add packages/core/src/daemon/ packages/core/tests/daemon/
 git commit -m "feat: add IPCServer and IPCClient for daemon communication"
 ```
 
@@ -2023,14 +2032,14 @@ git commit -m "feat: add IPCServer and IPCClient for daemon communication"
 ### Task 3.2: Create MarvisDaemon
 
 **Files:**
-- Create: `src/daemon/daemon.ts`
-- Modify: `src/daemon/index.ts`
-- Create: `tests/daemon/daemon.test.ts`
+- Create: `packages/core/src/daemon/daemon.ts`
+- Modify: `packages/core/src/daemon/index.ts`
+- Create: `packages/core/tests/daemon/daemon.test.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// tests/daemon/daemon.test.ts
+// packages/core/tests/daemon/daemon.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MarvisDaemon } from "../../src/daemon/daemon.js";
 import { IPCClient } from "../../src/daemon/ipc-client.js";
@@ -2111,13 +2120,13 @@ describe("MarvisDaemon", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- tests/daemon/daemon.test.ts`
+Run: `pnpm test -- packages/core/tests/daemon/daemon.test.ts`
 Expected: FAIL
 
 **Step 3: Write MarvisDaemon implementation**
 
 ```typescript
-// src/daemon/daemon.ts
+// packages/core/src/daemon/daemon.ts
 import { writeFileSync, unlinkSync, existsSync, readFileSync } from "fs";
 import type { DaemonConfig, IPCRequest, IPCResponse, DaemonStatus } from "../types/index.js";
 import { IPCServer } from "./ipc-server.js";
@@ -2314,7 +2323,7 @@ export class MarvisDaemon {
 **Step 4: Update barrel export**
 
 ```typescript
-// src/daemon/index.ts
+// packages/core/src/daemon/index.ts
 export * from "./logger.js";
 export * from "./ipc-server.js";
 export * from "./ipc-client.js";
@@ -2323,13 +2332,13 @@ export * from "./daemon.js";
 
 **Step 5: Run test to verify it passes**
 
-Run: `npm test -- tests/daemon/daemon.test.ts`
+Run: `pnpm test -- packages/core/tests/daemon/daemon.test.ts`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add src/daemon/ tests/daemon/
+git add packages/core/src/daemon/ packages/core/tests/daemon/
 git commit -m "feat: add MarvisDaemon with plugin loading and IPC handling"
 ```
 
@@ -2340,14 +2349,14 @@ git commit -m "feat: add MarvisDaemon with plugin loading and IPC handling"
 ### Task 4.1: Create CLI Entry Point
 
 **Files:**
-- Create: `src/cli/cli.ts`
-- Create: `src/bin/marvis.ts`
-- Create: `src/bin/marvis-daemon.ts`
+- Create: `apps/cli/src/cli/cli.ts`
+- Create: `apps/cli/src/bin/marvis.ts`
+- Create: `packages/core/src/bin/marvis-daemon.ts`
 
 **Step 1: Create CLI implementation**
 
 ```typescript
-// src/cli/cli.ts
+// apps/cli/src/cli/cli.ts
 import { Command } from "commander";
 import { existsSync, readFileSync } from "fs";
 import { spawn } from "child_process";
@@ -2510,7 +2519,7 @@ function getDefaultConfig(): DaemonConfig {
 **Step 2: Create CLI entry point**
 
 ```typescript
-// src/bin/marvis.ts
+// apps/cli/src/bin/marvis.ts
 #!/usr/bin/env node
 import { createCLI } from "../cli/cli.js";
 
@@ -2521,7 +2530,7 @@ program.parse();
 **Step 3: Create daemon entry point**
 
 ```typescript
-// src/bin/marvis-daemon.ts
+// packages/core/src/bin/marvis-daemon.ts
 #!/usr/bin/env node
 import { MarvisDaemon } from "../daemon/daemon.js";
 
@@ -2542,13 +2551,13 @@ daemon.start().catch((err) => {
 **Step 4: Create CLI barrel export**
 
 ```typescript
-// src/cli/index.ts
+// apps/cli/src/cli/index.ts
 export * from "./cli.js";
 ```
 
 **Step 5: Build and test manually**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 Run: `node dist/bin/marvis.js --help`
@@ -2569,7 +2578,7 @@ Expected: "Marvis daemon stopped"
 **Step 6: Commit**
 
 ```bash
-git add src/cli/ src/bin/
+git add apps/cli/src/cli/ apps/cli/src/bin/
 git commit -m "feat: add CLI with start/stop/status/plugins commands"
 ```
 
@@ -2580,12 +2589,12 @@ git commit -m "feat: add CLI with start/stop/status/plugins commands"
 ### Task 5.1: Update Main Exports
 
 **Files:**
-- Modify: `src/index.ts`
+- Modify: `packages/core/src/index.ts`
 
 **Step 1: Update main exports**
 
 ```typescript
-// src/index.ts
+// packages/core/src/index.ts
 // Types
 export * from "./types/index.js";
 
@@ -2605,18 +2614,18 @@ export * from "./cli/index.js";
 
 **Step 2: Verify build**
 
-Run: `npm run build`
+Run: `pnpm build`
 Expected: Build succeeds
 
 **Step 3: Run all tests**
 
-Run: `npm test`
+Run: `pnpm test`
 Expected: All tests pass
 
 **Step 4: Commit**
 
 ```bash
-git add src/index.ts
+git add packages/core/src/index.ts
 git commit -m "feat: complete V1 foundation with all exports"
 ```
 
@@ -2644,8 +2653,8 @@ Personal AI assistant daemon with plugin architecture, built on the Pi agent fra
 ## Installation
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm build
 ```
 
 ## Usage
@@ -2654,57 +2663,66 @@ npm run build
 
 ```bash
 # Background mode
-npm run cli -- start
+pnpm cli -- start
 
 # Foreground mode (for development)
-npm run cli -- start --foreground
+pnpm cli -- start --foreground
 ```
 
 ### Check status
 
 ```bash
-npm run cli -- status
+pnpm cli -- status
 ```
 
 ### List plugins
 
 ```bash
-npm run cli -- plugins
+pnpm cli -- plugins
 ```
 
 ### Stop the daemon
 
 ```bash
-npm run cli -- stop
+pnpm cli -- stop
 ```
 
 ## Development
 
 ```bash
 # Run tests
-npm test
+pnpm test
 
 # Type check
-npm run typecheck
+pnpm typecheck
 
 # Development mode (auto-restart)
-npm run dev
+pnpm dev
 ```
 
 ## Project Structure
 
 ```
-src/
-├── types/          # Shared TypeScript types
-├── daemon/         # Daemon process and IPC
-├── core/
-│   └── memory/     # SQLite persistence
-├── plugins/        # Plugin system
-│   └── shell/      # Shell command plugin
-├── cli/            # CLI interface
-└── bin/            # Entry points
-```
-
+packages/
+├── core/                # @marvis/core
+│   ├── src/
+│   │   ├── index.ts
+│   │   ├── types/       # Shared TypeScript types
+│   │   ├── daemon/      # Daemon process and IPC
+│   │   ├── core/
+│   │   │   └── memory/  # SQLite persistence
+│   │   ├── plugins/     # Plugin system
+│   │   └── bin/         # Entry points
+│   └── tests/
+└── plugin-shell/        # @marvis/plugin-shell
+    ├── src/             # Shell command plugin
+    └── tests/
+apps/
+└── cli/                 # @marvis/cli
+    ├── src/
+    │   ├── cli/         # CLI interface
+    │   └── bin/         # CLI entry point
+    └── tests/
 ## License
 
 MIT

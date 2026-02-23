@@ -1,43 +1,26 @@
 {
-  "name": "marvis",
+  "name": "marvis-monorepo",
   "version": "0.1.0",
-  "description": "Personal AI assistant daemon with plugin architecture",
+  "private": true,
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "marvis": "dist/bin/marvis.js",
-    "marvis-daemon": "dist/bin/marvis-daemon.js"
-  },
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch src/bin/marvis-daemon.ts",
-    "start": "node dist/bin/marvis-daemon.js",
-    "cli": "tsx src/bin/marvis.ts",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@mariozechner/pi-agent-core": "latest",
-    "@mariozechner/pi-ai": "latest",
-    "@sinclair/typebox": "^0.32.0",
-    "better-sqlite3": "^11.0.0",
-    "commander": "^12.0.0",
-    "smol-toml": "^1.6.0"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.0",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.0.0",
-    "tsx": "^4.0.0",
-    "typescript": "^5.4.0",
-    "vitest": "^1.0.0"
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "test": "turbo test",
+    "test:run": "turbo test:run",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "lint:unsafe": "turbo lint:unsafe",
+    "format": "turbo format"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "@marvis/cli": "workspace:*"
   }
 }

@@ -1,5 +1,15 @@
 # Marvis Design Document
 
+> **⚠️ Post-Migration Note (2026-02-27):** This document was written before the monorepo migration.
+> The project has been restructured from a flat `src/` layout into a pnpm monorepo with:
+> - `packages/core/` (@marvis/core) — Core logic, daemon, memory, plugin system, types
+> - `packages/plugin-shell/` (@marvis/plugin-shell) — Shell command plugin
+> - `apps/cli/` (@marvis/cli) — CLI interface
+>
+> All file paths, import paths, and build commands in this document have been updated to reflect the new structure.
+> Build: `pnpm build` (Turborepo) | Test: `pnpm test` | Lint: `pnpm lint` (Biome.js)
+
+
 **Date**: 2026-02-22  
 **Status**: Approved  
 **Author**: AI-assisted design session
@@ -35,45 +45,55 @@ Minimal viable system:
 
 ```
 marvis/
-├── package.json
-├── tsconfig.json
-├── src/
-│   ├── index.ts                    # Library exports
-│   ├── daemon/
-│   │   ├── daemon.ts               # MarvisDaemon class
-│   │   ├── ipc-server.ts           # Unix socket IPC
-│   │   ├── lifecycle.ts            # Start/stop/restart logic
-│   │   └── logger.ts               # Structured logging
-│   ├── core/
-│   │   ├── marvis.ts               # Main Marvis agent wrapper
-│   │   ├── model-router.ts         # Local/cloud model routing
-│   │   ├── config.ts               # Configuration management
-│   │   └── memory/
-│   │       ├── store.ts            # SQLite persistence layer
-│   │       ├── context.ts          # Context window management
-│   │       └── types.ts            # Memory-related types
-│   ├── plugins/
-│   │   ├── plugin.ts               # Plugin interface & BasePlugin
-│   │   ├── manager.ts              # PluginManager
-│   │   ├── registry.ts             # Plugin discovery & loading
-│   │   ├── shell/
+├── packages/
+│   ├── core/            # @marvis/core
+│   │   ├── src/
 │   │   │   ├── index.ts
-│   │   │   └── tools.ts
-│   │   ├── files/
-│   │   │   ├── index.ts
-│   │   │   └── tools.ts
-│   │   └── web/
-│   │       ├── index.ts
-│   │       └── tools.ts
-│   ├── cli/
-│   │   ├── cli.ts                  # CLI entry point
-│   │   ├── repl.ts                 # Interactive REPL
-│   │   └── commands.ts             # Slash commands
-│   └── types/
-│       └── index.ts                # Shared type definitions
-├── bin/
-│   ├── marvis.ts                   # CLI binary entry
-│   └── marvis-daemon.ts            # Daemon binary entry
+│   │   │   ├── daemon/
+│   │   │   │   ├── daemon.ts               # MarvisDaemon class
+│   │   │   │   ├── ipc-server.ts           # Unix socket IPC
+│   │   │   │   ├── lifecycle.ts            # Start/stop/restart logic
+│   │   │   │   └── logger.ts               # Structured logging
+│   │   │   ├── core/
+│   │   │   │   ├── marvis.ts               # Main Marvis agent wrapper
+│   │   │   │   ├── model-router.ts         # Local/cloud model routing
+│   │   │   │   ├── config.ts               # Configuration management
+│   │   │   │   └── memory/
+│   │   │   │       ├── store.ts            # SQLite persistence layer
+│   │   │   │       ├── context.ts          # Context window management
+│   │   │   │       └── types.ts            # Memory-related types
+│   │   │   ├── plugins/
+│   │   │   │   ├── plugin.ts               # Plugin interface & BasePlugin
+│   │   │   │   ├── manager.ts              # PluginManager
+│   │   │   │   ├── registry.ts             # Plugin discovery & loading
+│   │   │   │   └── index.ts
+│   │   │   ├── types/
+│   │   │   │   └── index.ts                # Shared type definitions
+│   │   │   └── bin/
+│   │   │       └── marvis-daemon.ts        # Daemon binary entry
+│   │   ├── tests/
+│   │   └── package.json
+│   └── plugin-shell/    # @marvis/plugin-shell
+│       ├── src/
+│       │   ├── index.ts
+│       │   └── tools.ts
+│       ├── tests/
+│       └── package.json
+├── apps/
+│   └── cli/             # @marvis/cli
+│       ├── src/
+│       │   ├── cli/
+│       │   │   ├── cli.ts                  # CLI entry point
+│       │   │   ├── repl.ts                 # Interactive REPL
+│       │   │   └── commands.ts             # Slash commands
+│       │   └── bin/
+│       │       └── marvis.ts               # CLI binary entry
+│       ├── tests/
+│       └── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+├── biome.json
+├── package.json (root)
 ├── data/                           # Runtime data (gitignored)
 │   ├── marvis.db                   # SQLite database
 │   ├── marvis.sock                 # Unix socket
@@ -95,7 +115,8 @@ marvis/
 | CLI | Commander.js | Standard Node CLI framework |
 | IPC | Unix domain sockets | Fast, secure, macOS-native |
 | Process | Native Node (no PM2) | Simpler, fewer dependencies |
-
+| Build | Turborepo + tsup | Fast monorepo builds |
+| Linter | Biome.js | Fast, zero-config linting & formatting |
 ### Package Dependencies
 
 ```json
@@ -287,9 +308,9 @@ class PluginManager {
 ### Example: Shell Plugin
 
 ```typescript
-// src/plugins/shell/index.ts
+// packages/plugin-shell/src/index.ts
 import { Type } from "@sinclair/typebox";
-import { BasePlugin, PluginManifest } from "../plugin";
+import { BasePlugin, PluginManifest } from "@marvis/core";
 import { AgentTool } from "@mariozechner/pi-agent-core";
 
 export class ShellPlugin extends BasePlugin {
@@ -362,7 +383,7 @@ You can execute shell commands on the user's macOS system.
 ### Marvis Class
 
 ```typescript
-// src/core/marvis.ts
+// packages/core/src/core/marvis.ts
 import { Agent, AgentTool } from "@mariozechner/pi-agent-core";
 import { ChatMessage } from "@mariozechner/pi-ai";
 import { PluginManager } from "../plugins/manager";
@@ -546,7 +567,7 @@ Use the delegate_to_agent tool when a task requires specialized handling.
 ### ModelRouter
 
 ```typescript
-// src/core/model-router.ts
+// packages/core/src/core/model-router.ts
 import { Api, createApi } from "@mariozechner/pi-ai";
 import { ChatMessage } from "@mariozechner/pi-ai";
 
@@ -712,7 +733,7 @@ CREATE INDEX IF NOT EXISTS idx_memories_importance ON memories(importance DESC);
 ### MemoryStore
 
 ```typescript
-// src/core/memory/store.ts
+// packages/core/src/core/memory/store.ts
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
 import { ChatMessage } from "@mariozechner/pi-ai";
@@ -962,7 +983,7 @@ class MemoryStore {
 ### ContextManager
 
 ```typescript
-// src/core/memory/context.ts
+// packages/core/src/core/memory/context.ts
 import { ChatMessage } from "@mariozechner/pi-ai";
 import { MemoryStore, StoredMessage } from "./store";
 
@@ -1029,7 +1050,7 @@ class ContextManager {
 ### MarvisDaemon
 
 ```typescript
-// src/daemon/daemon.ts
+// packages/core/src/daemon/daemon.ts
 import { Marvis } from "../core/marvis";
 import { IPCServer } from "./ipc-server";
 import { Logger, createLogger } from "./logger";
@@ -1238,7 +1259,7 @@ class MarvisDaemon {
 ### IPCServer
 
 ```typescript
-// src/daemon/ipc-server.ts
+// packages/core/src/daemon/ipc-server.ts
 import { createServer, Server, Socket } from "net";
 import { unlinkSync, existsSync } from "fs";
 
@@ -1441,9 +1462,9 @@ class IPCClient {
 ### MarvisCLI
 
 ```typescript
-// src/cli/cli.ts
+// apps/cli/src/cli/cli.ts
 import { Command } from "commander";
-import { IPCClient } from "../daemon/ipc-server";
+import { IPCClient } from "@marvis/core/daemon";
 import { REPL } from "./repl";
 import { existsSync, readFileSync } from "fs";
 import { spawn } from "child_process";
@@ -1666,9 +1687,9 @@ program.parse();
 ### REPL
 
 ```typescript
-// src/cli/repl.ts
+// apps/cli/src/cli/repl.ts
 import * as readline from "readline";
-import { IPCClient } from "../daemon/ipc-server";
+import { IPCClient } from "@marvis/core/daemon";
 import { SlashCommands } from "./commands";
 
 class REPL {
@@ -1745,8 +1766,8 @@ class REPL {
 ### SlashCommands
 
 ```typescript
-// src/cli/commands.ts
-import { IPCClient } from "../daemon/ipc-server";
+// apps/cli/src/cli/commands.ts
+import { IPCClient } from "@marvis/core/daemon";
 
 class SlashCommands {
   private client: IPCClient;
@@ -1876,13 +1897,13 @@ Available Commands:
 ### Entry Points
 
 ```typescript
-// bin/marvis.ts
+// apps/cli/src/bin/marvis.ts
 #!/usr/bin/env node
-import "../src/cli/cli";
+import "../cli/cli.js";
 
-// bin/marvis-daemon.ts
+// packages/core/src/bin/marvis-daemon.ts
 #!/usr/bin/env node
-import { MarvisDaemon } from "../src/daemon/daemon";
+import { MarvisDaemon } from "../daemon/daemon.js";
 
 // Direct daemon entry for development
 const daemon = new MarvisDaemon({
@@ -1900,7 +1921,7 @@ daemon.start().catch(console.error);
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1)
-- [ ] Project setup (package.json, tsconfig, directory structure)
+- [ ] Project setup (monorepo with pnpm, turbo.json, biome.json, directory structure)
 - [ ] Core types and interfaces
 - [ ] Basic MemoryStore with SQLite
 - [ ] Minimal Marvis class wrapping Pi Agent
@@ -1908,7 +1929,7 @@ daemon.start().catch(console.error);
 ### Phase 2: Daemon & IPC (Week 2)
 - [ ] IPCServer and IPCClient
 - [ ] MarvisDaemon with lifecycle management
-- [ ] CLI with start/stop/status commands
+- [ ] CLI with start/stop/status commands (apps/cli)
 
 ### Phase 3: Plugin System (Week 3)
 - [ ] Plugin interface and BasePlugin

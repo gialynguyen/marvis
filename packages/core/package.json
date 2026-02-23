@@ -1,0 +1,35 @@
+{
+  "name": "@marvis/core",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./bin/marvis-daemon": "./dist/bin/marvis-daemon.js"
+  },
+  "bin": {
+    "marvis-daemon": "dist/bin/marvis-daemon.js"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint": "biome lint src/",
+    "lint:unsafe": "biome lint src/ --write --unsafe",
+    "format": "biome format src/ --write",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "^0.55.1",
+    "@mariozechner/pi-ai": "^0.55.1",
+    "@marvis/config": "workspace:*",
+    "@sinclair/typebox": "^0.34.11",
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.2",
+    "tsdown": "^0.21.0-beta.2",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.8"
+  }
+}

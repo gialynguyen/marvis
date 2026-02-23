@@ -12,8 +12,8 @@ Personal AI assistant daemon with plugin architecture, built on the Pi agent fra
 ## Installation
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm build
 ```
 
 ## Usage
@@ -22,35 +22,35 @@ npm run build
 
 ```bash
 # Background mode
-npm run cli -- start
+node apps/cli/dist/bin/marvis.js start
 
 # Foreground mode (for development)
-npm run cli -- start --foreground
+node apps/cli/dist/bin/marvis.js start --foreground
 ```
 
 ### Check status
 
 ```bash
-npm run cli -- status
+node apps/cli/dist/bin/marvis.js status
 ```
 
 ### List plugins
 
 ```bash
-npm run cli -- plugins
+node apps/cli/dist/bin/marvis.js plugins
 ```
 
 ### Stop the daemon
 
 ```bash
-npm run cli -- stop
+node apps/cli/dist/bin/marvis.js stop
 ```
 
 ### Chat with Marvis
 
 ```bash
 # Start interactive chat (daemon must be running)
-npm run cli -- chat
+node apps/cli/dist/bin/marvis.js chat
 ```
 
 **REPL Commands:**
@@ -80,28 +80,25 @@ MARVIS_DANGER_THRESHOLD="dangerous"   # dangerous | moderate
 
 ```bash
 # Run tests
-npm test
+pnpm test
 
 # Type check
-npm run typecheck
+pnpm typecheck
 
 # Development mode (auto-restart)
-npm run dev
+pnpm dev
 ```
 
 ## Project Structure
 
 ```
-src/
-├── types/          # Shared TypeScript types
-├── daemon/         # Daemon process and IPC
-├── core/
-│   └── memory/     # SQLite persistence
-├── plugins/        # Plugin system
-│   └── shell/      # Shell command plugin
-├── cli/            # CLI interface
-└── bin/            # Entry points
+packages/
+  core/            # Core logic, daemon, memory
+  plugin-shell/    # Shell command plugin
+apps/
+  cli/             # CLI interface
 ```
+
 
 ## License
 

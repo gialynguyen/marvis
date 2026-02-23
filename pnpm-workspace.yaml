@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - apps/*
+
+ignoredBuiltDependencies:
+  - '@biomejs/biome'
+  - better-sqlite3
+  - esbuild
+  - protobufjs
