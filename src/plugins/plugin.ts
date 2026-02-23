@@ -4,10 +4,13 @@ import { createLogger, type Logger } from "../daemon/logger.js";
 // Re-export for convenience
 export type { PluginManifest };
 
+export type DangerLevel = "safe" | "moderate" | "dangerous";
+
 export interface AgentTool {
   name: string;
   description: string;
   parameters: unknown;
+  dangerLevel?: DangerLevel;
   execute: (params: unknown) => Promise<unknown>;
 }
 

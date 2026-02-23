@@ -2,10 +2,13 @@ import { createServer, Server, Socket } from "net";
 import { unlinkSync, existsSync, chmodSync } from "fs";
 import * as path from "path";
 import * as fs from "fs";
-import type { IPCRequest, IPCResponse } from "../types/index.js";
+import type { IPCRequest, IPCResponse, IPCStreamChunk } from "../types/index.js";
 import { createLogger } from "./logger.js";
 
-export type RequestHandler = (request: IPCRequest) => Promise<IPCResponse>;
+export type RequestHandler = (
+  request: IPCRequest,
+  sendChunk?: (chunk: IPCStreamChunk) => void
+) => Promise<IPCResponse>;
 
 export class IPCServer {
   private server: Server | null = null;
@@ -68,7 +71,10 @@ export class IPCServer {
           const request: IPCRequest = JSON.parse(line);
           this.logger.debug(`Received request: ${request.type}`);
 
-          const response = await this.handler(request);
+          const sendChunk = (chunk: IPCStreamChunk) => {
+            this.sendStreamChunk(socket, chunk);
+          };
+          const response = await this.handler(request, sendChunk);
           response.id = request.id;
 
           socket.write(JSON.stringify(response) + "\n");
@@ -96,6 +102,12 @@ export class IPCServer {
       this.logger.error("Socket error", err);
       this.connections.delete(socket);
     });
+  }
+
+  sendStreamChunk(socket: Socket, chunk: IPCStreamChunk): void {
+    if (!socket.destroyed) {
+      socket.write(JSON.stringify(chunk) + "\n");
+    }
   }
 
   async stop(): Promise<void> {

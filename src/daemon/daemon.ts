@@ -1,10 +1,13 @@
 import { writeFileSync, unlinkSync, existsSync, readFileSync } from "fs";
-import type { DaemonConfig, IPCRequest, IPCResponse, DaemonStatus } from "../types/index.js";
+import type { DaemonConfig, IPCRequest, IPCResponse, DaemonStatus, IPCStreamChunk } from "../types/index.js";
 import { IPCServer } from "./ipc-server.js";
 import { createLogger, type Logger } from "./logger.js";
 import { MemoryStore } from "../core/memory/store.js";
 import { PluginManager } from "../plugins/manager.js";
 import { ShellPlugin } from "../plugins/shell/index.js";
+import { MarvisAgent } from "../core/marvis.js";
+import { loadConfig } from "../core/config.js";
+
 
 export class MarvisDaemon {
   private ipcServer!: IPCServer;
@@ -15,6 +18,7 @@ export class MarvisDaemon {
   private pluginManager!: PluginManager;
   private currentConversationId: string | null = null;
   private startTime: number = 0;
+  private marvisAgent!: MarvisAgent;
 
   constructor(config: DaemonConfig) {
     this.config = config;
@@ -43,6 +47,21 @@ export class MarvisDaemon {
       this.currentConversationId = await this.memoryStore.createConversation();
     }
     this.logger.info(`Active conversation: ${this.currentConversationId}`);
+
+    const config = loadConfig();
+    this.marvisAgent = new MarvisAgent(
+      {
+        provider: config.llm.provider,
+        model: config.llm.model,
+        systemPrompt: config.system.systemPrompt,
+        confirmDangerousTools: config.tools.confirmDangerous,
+        dangerThreshold: config.tools.dangerThreshold,
+      },
+      this.pluginManager,
+      this.memoryStore,
+      this.currentConversationId!
+    );
+    this.logger.info("MarvisAgent initialized");
 
     this.ipcServer = new IPCServer(
       this.config.socketPath,
@@ -93,7 +112,7 @@ export class MarvisDaemon {
     process.on("SIGHUP", () => shutdown("SIGHUP"));
   }
 
-  private async handleRequest(request: IPCRequest): Promise<IPCResponse> {
+  private async handleRequest(request: IPCRequest, sendChunk?: (chunk: IPCStreamChunk) => void): Promise<IPCResponse> {
     try {
       switch (request.type) {
         case "status":
@@ -102,6 +121,10 @@ export class MarvisDaemon {
           return this.handlePlugins();
         case "new_conversation":
           return await this.handleNewConversation();
+        case "prompt":
+          return this.handlePrompt(request, sendChunk);
+        case "set_model":
+          return this.handleSetModel(request);
         case "shutdown":
           setTimeout(() => this.shutdown(), 100);
           return { success: true, data: "Shutdown initiated" };
@@ -151,6 +174,27 @@ export class MarvisDaemon {
       success: true,
       data: { conversationId: this.currentConversationId },
     };
+  }
+
+
+  private async handlePrompt(
+    request: IPCRequest,
+    sendChunk?: (chunk: IPCStreamChunk) => void
+  ): Promise<IPCResponse> {
+    const { message } = request.data as { message: string };
+
+    await this.marvisAgent.prompt(message, (chunk) => {
+      sendChunk?.({ id: request.id, type: "text", chunk });
+    });
+
+    sendChunk?.({ id: request.id, type: "done" });
+    return { id: request.id, success: true };
+  }
+
+  private handleSetModel(request: IPCRequest): IPCResponse {
+    const { provider, model } = request.data as { provider: string; model: string };
+    this.marvisAgent.setModel(provider, model);
+    return { id: request.id, success: true };
   }
 
   async shutdown(): Promise<void> {

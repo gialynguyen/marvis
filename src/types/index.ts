@@ -30,6 +30,8 @@ export type IPCRequestType =
   | "status"
   | "history"
   | "new_conversation"
+  | "set_model"
+  | "confirm_tool"
   | "plugins"
   | "plugin_promote"
   | "plugin_demote"
@@ -50,8 +52,11 @@ export interface IPCResponse {
 
 export interface IPCStreamChunk {
   id: string;
+  type: "text" | "tool_start" | "tool_end" | "confirm_request" | "done" | "error";
   chunk?: string;
-  done: boolean;
+  toolName?: string;
+  toolParams?: unknown;
+  error?: string;
 }
 
 // ============= Memory Types =============
@@ -91,11 +96,19 @@ export interface Memory {
 // ============= Config Types =============
 
 export interface MarvisConfig {
-  systemPrompt?: string;
-  maxContextTokens?: number;
-  localModel?: string;
-  cloudModel?: string;
-  alwaysLocal?: boolean;
+  llm: {
+    provider: "openai" | "anthropic" | "google";
+    model: string;
+    fallbackProvider?: "openai" | "anthropic" | "google";
+    fallbackModel?: string;
+  };
+  tools: {
+    confirmDangerous: boolean;
+    dangerThreshold: "moderate" | "dangerous";
+  };
+  system: {
+    systemPrompt: string;
+  };
 }
 
 export interface DaemonConfig {

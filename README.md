@@ -7,7 +7,7 @@ Personal AI assistant daemon with plugin architecture, built on the Pi agent fra
 - **Daemon Architecture**: Runs as a background process with Unix socket IPC
 - **Plugin System**: Extensible via plugins that can be promoted to full agents
 - **Persistent Memory**: SQLite-backed conversation and long-term memory
-- **Local-First LLM**: Ollama integration with cloud fallback
+- **LLM Integration**: Multi-provider support (Anthropic, OpenAI, Google) via Pi Agent framework
 
 ## Installation
 
@@ -44,6 +44,36 @@ npm run cli -- plugins
 
 ```bash
 npm run cli -- stop
+```
+
+### Chat with Marvis
+
+```bash
+# Start interactive chat (daemon must be running)
+npm run cli -- chat
+```
+
+**REPL Commands:**
+- `/help` - Show available commands
+- `/new` - Start a new conversation
+- `/history` - Show conversation history
+- `/model <provider> <model>` - Switch LLM model
+- `/quit` - Exit chat
+
+## Configuration
+
+**Environment Variables:**
+```bash
+# Required: At least one API key
+ANTHROPIC_API_KEY="sk-ant-..."
+OPENAI_API_KEY="sk-..."
+GEMINI_API_KEY="..."
+
+# Optional: Override defaults
+MARVIS_PROVIDER="anthropic"           # anthropic | openai | google
+MARVIS_MODEL="claude-sonnet-4-0"      # Model name for provider
+MARVIS_CONFIRM_DANGEROUS="true"       # Require confirmation for dangerous tools
+MARVIS_DANGER_THRESHOLD="dangerous"   # dangerous | moderate
 ```
 
 ## Development
