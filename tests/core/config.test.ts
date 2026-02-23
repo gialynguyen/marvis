@@ -33,4 +33,36 @@ describe("Config", () => {
     const config = loadConfig();
     expect(config.tools.confirmDangerous).toBe(false);
   });
+
+  it("should throw error for invalid provider", () => {
+    process.env.MARVIS_PROVIDER = "invalid";
+    expect(() => loadConfig()).toThrow(
+      /Invalid MARVIS_PROVIDER: invalid/
+    );
+  });
+
+  it("should throw error for invalid danger threshold", () => {
+    process.env.MARVIS_DANGER_THRESHOLD = "invalid";
+    expect(() => loadConfig()).toThrow(
+      /Invalid MARVIS_DANGER_THRESHOLD: invalid/
+    );
+  });
+
+  it("should accept valid danger thresholds", () => {
+    process.env.MARVIS_DANGER_THRESHOLD = "moderate";
+    const config = loadConfig();
+    expect(config.tools.dangerThreshold).toBe("moderate");
+  });
+
+  it("should parse confirmDangerous correctly for true-like values", () => {
+    process.env.MARVIS_CONFIRM_DANGEROUS = "true";
+    const config = loadConfig();
+    expect(config.tools.confirmDangerous).toBe(true);
+  });
+
+  it("should parse confirmDangerous correctly for any non-false value", () => {
+    process.env.MARVIS_CONFIRM_DANGEROUS = "yes";
+    const config = loadConfig();
+    expect(config.tools.confirmDangerous).toBe(true);
+  });
 });

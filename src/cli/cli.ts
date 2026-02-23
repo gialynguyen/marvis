@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "fs";
 import { spawn } from "child_process";
 import { IPCClient } from "../daemon/ipc-client.js";
 import type { DaemonConfig } from "../types/index.js";
+import { loadConfig } from "../core/config.js";
 
 const DEFAULT_SOCKET = "data/marvis.sock";
 const DEFAULT_PID_FILE = "data/marvis.pid";
@@ -158,6 +159,6 @@ function getDefaultConfig(): DaemonConfig {
     pidFile: DEFAULT_PID_FILE,
     logFile: DEFAULT_LOG_FILE,
     dbPath: DEFAULT_DB_PATH,
-    marvisConfig: {},
+    marvisConfig: loadConfig(),
   };
 }
