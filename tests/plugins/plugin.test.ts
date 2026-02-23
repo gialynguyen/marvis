@@ -69,4 +69,15 @@ describe("BasePlugin", () => {
     const plugin = new TestPlugin();
     expect(plugin.getAgent()).toBeUndefined();
   });
+
+  it("should have danger level on tools", () => {
+    const tool = {
+      name: "test",
+      description: "Test tool",
+      dangerLevel: "dangerous" as const,
+      parameters: {},
+      execute: async () => ({}),
+    };
+    expect(tool.dangerLevel).toBe("dangerous");
+  });
 });

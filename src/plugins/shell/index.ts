@@ -25,6 +25,7 @@ export class ShellPlugin extends BasePlugin {
         name: "execute_command",
         description:
           "Execute a shell command and return the output. Use with caution for system-modifying commands.",
+        dangerLevel: "dangerous",
         parameters: Type.Object({
           command: Type.String({ description: "The shell command to execute" }),
           cwd: Type.Optional(
@@ -48,6 +49,7 @@ export class ShellPlugin extends BasePlugin {
       {
         name: "get_env",
         description: "Get the value of an environment variable",
+        dangerLevel: "safe",
         parameters: Type.Object({
           name: Type.String({ description: "Environment variable name" }),
         }),
