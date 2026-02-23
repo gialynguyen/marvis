@@ -4,6 +4,7 @@ import type { IPCRequest, IPCResponse, IPCRequestType, IPCStreamChunk } from "..
 
 export class IPCClient {
   private socketPath: string;
+  private socket?: Socket;
 
   constructor(socketPath: string) {
     this.socketPath = socketPath;
@@ -117,5 +118,50 @@ export class IPCClient {
         await new Promise((r) => setTimeout(r, 10));
       }
     }
+  }
+
+  async streamRequest(
+    request: IPCRequest,
+    onChunk: (chunk: IPCStreamChunk) => void
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket) {
+        reject(new Error("Not connected"));
+        return;
+      }
+
+      const requestStr = JSON.stringify(request) + "\n";
+      this.socket.write(requestStr);
+
+      let buffer = "";
+
+      const handleData = (data: Buffer) => {
+        buffer += data.toString();
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const chunk = JSON.parse(line) as IPCStreamChunk;
+            onChunk(chunk);
+            if (chunk.type === "done" || chunk.type === "error") {
+              cleanup();
+              resolve();
+            }
+          } catch (e) {
+            // Non-JSON response, treat as regular response
+            cleanup();
+            resolve();
+          }
+        }
+      };
+
+      const cleanup = () => {
+        this.socket?.off("data", handleData);
+      };
+
+      this.socket.on("data", handleData);
+    });
   }
 }
