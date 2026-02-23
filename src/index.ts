@@ -6,7 +6,7 @@ export * from "./types/index.js";
 export * from "./daemon/index.js";
 
 // Core
-export * from "./core/memory/index.js";
+export * from "./core/index.js";
 
 // Plugins
 export * from "./plugins/index.js";

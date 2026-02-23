@@ -3,6 +3,7 @@ import { getModel } from "@mariozechner/pi-ai";
 import type { PluginManager } from "../plugins/manager.js";
 import type { MemoryStore } from "./memory/store.js";
 import type { AgentTool, DangerLevel } from "../plugins/plugin.js";
+import type { Api, KnownProvider, Model } from "@mariozechner/pi-ai";
 
 export interface MarvisAgentConfig {
   provider: string;
@@ -14,6 +15,20 @@ export interface MarvisAgentConfig {
 
 export type StreamCallback = (chunk: string) => void;
 export type ConfirmCallback = (tool: string, params: unknown) => Promise<boolean>;
+
+function getProviderApi(provider: string): Api {
+  const providerApiMap: Record<string, Api> = {
+    anthropic: "anthropic-messages",
+    openai: "openai-responses",
+    "azure-openai-responses": "azure-openai-responses",
+    "openai-codex": "openai-codex-responses",
+    "amazon-bedrock": "bedrock-converse-stream",
+    google: "google-generative-ai",
+    "google-gemini-cli": "google-gemini-cli",
+    "google-vertex": "google-vertex",
+  };
+  return (providerApiMap[provider] || "openai-responses") as Api;
+}
 
 export class MarvisAgent {
   private agent: Agent;
@@ -37,7 +52,10 @@ export class MarvisAgent {
     this.agent = new Agent({
       initialState: {
         systemPrompt: config.systemPrompt,
+        // Pi framework has strict types for getModel, but we accept arbitrary provider/model strings
+        // at runtime to support custom providers. Type assertion is necessary here.
         model: getModel(config.provider as any, config.model as any),
+
         tools: this.wrapPluginTools(),
       },
     });
@@ -48,7 +66,7 @@ export class MarvisAgent {
   }
 
   async prompt(message: string, onChunk?: StreamCallback): Promise<string> {
-    const unsubscribe = this.agent.subscribe((event: any) => {
+    const unsubscribe = this.agent.subscribe((event) => {
       if (
         event.type === "message_update" &&
         event.assistantMessageEvent?.type === "text_delta" &&
@@ -88,7 +106,7 @@ export class MarvisAgent {
           return {
             role: "assistant" as const,
             content: [{ type: "text" as const, text: m.content }],
-            api: "anthropic-messages" as const,
+            api: this.agent.state.model.api,
             provider: this.config.provider,
             model: this.config.model,
             usage: {
@@ -134,8 +152,14 @@ export class MarvisAgent {
         }
 
         const result = await tool.execute(params);
+        let resultStr: string;
+        try {
+          resultStr = JSON.stringify(result);
+        } catch (err) {
+          resultStr = `Error serializing result: ${err instanceof Error ? err.message : String(err)}`;
+        }
         return {
-          content: [{ type: "text", text: JSON.stringify(result) }],
+          content: [{ type: "text", text: resultStr }],
         };
       },
     };
