@@ -2,11 +2,11 @@
 // Types
 export * from "./types/index.js";
 
+// Core
+export * from "./core/index.js";
+
 // Daemon
 export * from "./daemon/index.js";
-
-// Core
-export * from "./core/memory/index.js";
 
 // Plugins
 export * from "./plugins/index.js";
