@@ -182,6 +182,7 @@ export class PluginConfigRegistry {
         schema: stripTypeBoxSymbols(entry.schema),
         defaults: entry.defaults,
         descriptions: entry.descriptions ?? {},
+        loadOnStartup: entry.loadOnStartup ?? false,
       };
     }
 
@@ -199,6 +200,8 @@ export interface PluginSchemaInfo {
   schema: Record<string, unknown>;
   defaults: Record<string, unknown>;
   descriptions: Record<string, string>;
+  /** Default value for load_on_startup */
+  loadOnStartup: boolean;
 }
 
 export interface ConfigSchemaInfo {

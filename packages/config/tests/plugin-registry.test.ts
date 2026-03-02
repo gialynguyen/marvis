@@ -457,6 +457,7 @@ describe("PluginConfigRegistry", () => {
 
       expect(result.plugins).toHaveProperty("shell");
       expect(result.plugins.shell.pluginName).toBe("Shell Commands");
+      expect(result.plugins.shell.loadOnStartup).toBe(false);
       expect(result.plugins.shell.defaults).toEqual({
         defaultTimeout: 30000,
         maxBufferSize: 10485760,
@@ -512,6 +513,26 @@ describe("PluginConfigRegistry", () => {
 
       const result = registry.getFullSchema(MarvisConfigSchema);
       expect(result.plugins.test.descriptions).toEqual({});
+    });
+
+    it("should include loadOnStartup in plugin schema info", () => {
+      registry.register({
+        pluginId: "essential",
+        pluginName: "Essential Plugin",
+        schema: Type.Object({}),
+        defaults: {},
+        loadOnStartup: true,
+      });
+      registry.register({
+        pluginId: "optional",
+        pluginName: "Optional Plugin",
+        schema: Type.Object({}),
+        defaults: {},
+      });
+
+      const result = registry.getFullSchema(MarvisConfigSchema);
+      expect(result.plugins.essential.loadOnStartup).toBe(true);
+      expect(result.plugins.optional.loadOnStartup).toBe(false);
     });
 
     it("should strip TypeBox internal symbols from schemas", () => {
