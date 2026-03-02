@@ -15,3 +15,6 @@ export * from "./plugin-registry";
 
 // Config Watcher
 export * from "./config-watcher";
+
+// Value Coercion
+export * from "./coerce";

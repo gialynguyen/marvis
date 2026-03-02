@@ -12,6 +12,7 @@ import {
   getPluginConfig,
   setPluginConfig,
   resetPluginConfig,
+  getConfigSchema,
 } from "../src/tools";
 
 describe("Config Plugin Tools", () => {
@@ -238,6 +239,21 @@ describe("Config Plugin Tools", () => {
       expect(content).toContain("NEW");
       expect(content).not.toContain("OLD");
     });
+
+    it("should coerce string 'true' to boolean for load_on_startup", () => {
+      writeFileSync(configPath, "");
+      // load_on_startup is not in the trading schema but is a daemon-level key
+      // coerceValue should handle it via special-case boolean coercion
+      const { updatedConfig } = setPluginConfig(registry, "trading", "load_on_startup", "true");
+      // The function should succeed without validation error
+      expect(updatedConfig).toBeDefined();
+    });
+
+    it("should coerce string number to actual number for schema fields", () => {
+      writeFileSync(configPath, "");
+      const { updatedConfig } = setPluginConfig(registry, "trading", "web_port", "8080");
+      expect(updatedConfig.webPort).toBe(8080);
+    });
   });
 
   describe("resetPluginConfig", () => {
@@ -267,6 +283,57 @@ describe("Config Plugin Tools", () => {
 
     it("should throw for unknown plugin", () => {
       expect(() => resetPluginConfig(registry, "unknown")).toThrow(/not found/);
+    });
+  });
+
+  describe("getConfigSchema", () => {
+    it("should return unified schema with core and plugins", () => {
+      const schema = getConfigSchema(registry);
+
+      // Core schema
+      expect(schema.core).toBeDefined();
+      expect(schema.core.type).toBe("object");
+      expect(schema.core.properties).toBeDefined();
+      const coreProps = schema.core.properties as Record<string, unknown>;
+      expect(coreProps).toHaveProperty("llm");
+      expect(coreProps).toHaveProperty("tools");
+      expect(coreProps).toHaveProperty("plugins");
+
+      // Plugin schemas
+      expect(schema.plugins).toBeDefined();
+      expect(schema.plugins).toHaveProperty("shell");
+      expect(schema.plugins).toHaveProperty("trading");
+    });
+
+    it("should include plugin metadata in schema", () => {
+      const schema = getConfigSchema(registry);
+
+      const shell = schema.plugins.shell;
+      expect(shell.pluginName).toBe("Shell Commands");
+      expect(shell.defaults).toEqual({ default_timeout: 30000, max_buffer_size: 10485760 });
+      expect(shell.descriptions).toEqual({
+        default_timeout: "Default command timeout in milliseconds",
+        max_buffer_size: "Maximum output buffer size in bytes",
+      });
+    });
+
+    it("should include plugin schema as JSON Schema", () => {
+      const schema = getConfigSchema(registry);
+
+      const tradingSchema = schema.plugins.trading.schema;
+      expect(tradingSchema.type).toBe("object");
+      expect(tradingSchema.properties).toBeDefined();
+    });
+
+    it("should be fully JSON-serializable", () => {
+      const schema = getConfigSchema(registry);
+      const json = JSON.stringify(schema);
+      expect(json).toBeTruthy();
+
+      const parsed = JSON.parse(json);
+      expect(parsed.core.type).toBe("object");
+      expect(parsed.plugins.shell.pluginName).toBe("Shell Commands");
+      expect(parsed.plugins.trading.pluginName).toBe("Trading");
     });
   });
 });

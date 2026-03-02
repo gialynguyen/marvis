@@ -7,6 +7,7 @@ import {
   MarvisConfigSchema,
   getConfigPath,
   loadConfig,
+  coerceValue,
 } from "@marvis/config";
 
 /**
@@ -174,11 +175,9 @@ export function setPluginConfig(
   const tomlKey = camelToSnake(key);
   const camelKey = snakeToCamel(key);
 
-  // Coerce string values that look like JSON arrays/objects into their actual
-  // types.  LLMs frequently serialize structured values as JSON strings
-  // (e.g. "[\"BTCUSDT\"]" instead of a real array), which would otherwise be
-  // written as a TOML string and fail schema validation on reload.
-  const coercedValue = coerceJsonString(value);
+  // Schema-aware coercion: converts LLM-sent strings to correct types
+  // (e.g. "true" → true, "3456" → 3456, '["BTC"]' → ["BTC"])
+  const coercedValue = coerceValue(entry.schema, tomlKey, value);
 
   // Build the proposed config
   const configPath = getConfigPath();
