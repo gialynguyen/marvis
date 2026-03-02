@@ -3,6 +3,8 @@ import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import {
   type MarvisConfig,
   type PluginConfigRegistry,
+  type ConfigSchemaInfo,
+  MarvisConfigSchema,
   getConfigPath,
   loadConfig,
 } from "@marvis/config";
@@ -139,8 +141,12 @@ export function getPluginConfig(
     );
   }
 
+  // Strip loadOnStartup from current config — it's a daemon-level concern
+  const rawConfig = (config.plugins[pluginId] as Record<string, unknown>) || {};
+  const { loadOnStartup: _, ...currentConfig } = rawConfig;
+
   return {
-    currentConfig: (config.plugins[pluginId] as Record<string, unknown>) || entry.defaults,
+    currentConfig: Object.keys(currentConfig).length > 0 ? currentConfig : entry.defaults,
     defaults: entry.defaults,
     descriptions: entry.descriptions || {},
   };
@@ -209,8 +215,9 @@ export function setPluginConfig(
   // Write back
   writeFileSync(configPath, stringifyToml(tomlObj), "utf-8");
 
+  const resolved = registry.resolve(pluginId, pluginsObj[pluginId]);
   return {
-    updatedConfig: registry.resolve(pluginId, pluginsObj[pluginId]),
+    updatedConfig: resolved.config,
     configPath,
   };
 }
@@ -272,6 +279,17 @@ export function resetPluginConfig(
     updatedConfig: entry.defaults,
     configPath,
   };
+}
+
+/**
+ * Get the unified config schema for the entire system.
+ * Returns the core MarvisConfigSchema + all registered plugin schemas
+ * as standard JSON Schema objects.
+ */
+export function getConfigSchema(
+  registry: PluginConfigRegistry,
+): ConfigSchemaInfo {
+  return registry.getFullSchema(MarvisConfigSchema);
 }
 
 // ============= Helpers =============

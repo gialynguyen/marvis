@@ -378,7 +378,11 @@ export function loadConfig(cliArgs?: CliConfigArgs, registry?: PluginConfigRegis
           `TOML config (${configPath})`,
         );
       }
-      config.plugins[pluginId] = registry.resolve(pluginId, userOverrides);
+      const resolved = registry.resolve(pluginId, userOverrides);
+      config.plugins[pluginId] = {
+        ...resolved.config,
+        loadOnStartup: resolved.loadOnStartup,
+      };
     }
   }
 

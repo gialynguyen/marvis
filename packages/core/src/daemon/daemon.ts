@@ -113,7 +113,6 @@ export class MarvisDaemon {
   }
 
   private async loadBuiltinPlugins(): Promise<void> {
-    // Load externally registered plugins based on load_on_startup config
     for (const { plugin, config } of this.pendingPlugins) {
       const pluginId = plugin.manifest.id;
       const pluginConfig = {
@@ -121,12 +120,8 @@ export class MarvisDaemon {
         ...this.config.marvisConfig.plugins[pluginId],
       };
 
-      // Check load_on_startup from the merged plugin config (default: false)
-      const loadOnStartup = pluginConfig.load_on_startup ?? false;
-
-      // Remove load_on_startup from the config passed to the plugin itself
-      // (it's a daemon-level concern, not a plugin config field)
-      const { load_on_startup: _, ...pluginInitConfig } = pluginConfig;
+      // loadOnStartup is a validated boolean set by the config system
+      const { loadOnStartup, ...pluginInitConfig } = pluginConfig;
 
       if (loadOnStartup) {
         await this.pluginManager.loadPlugin(plugin, pluginInitConfig);

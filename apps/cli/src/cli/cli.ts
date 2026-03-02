@@ -12,6 +12,7 @@ import { ShellPlugin } from "@marvis/plugin-shell";
 import { TradingPlugin } from "@marvis/plugin-trading";
 import { ConfigPlugin } from "@marvis/plugin-config";
 import { PluginManagerPlugin } from "@marvis/plugin-manager";
+import { Type } from "@sinclair/typebox";
 
 // Cached config - loaded once on CLI startup
 let cachedConfig: MarvisConfig | null = null;
@@ -85,21 +86,28 @@ export function createCLI(): Command {
           }
         }
 
+        // Register essential plugins with loadOnStartup: true
+        // These don't have configDescriptors but need to be in the registry
+        // so loadOnStartup defaults are handled by the config system.
+        registry.register({
+          pluginId: "config",
+          pluginName: "Configuration Manager",
+          schema: Type.Object({}),
+          defaults: {},
+          loadOnStartup: true,
+        });
+        registry.register({
+          pluginId: "plugin-manager",
+          pluginName: "Plugin Manager",
+          schema: Type.Object({}),
+          defaults: {},
+          loadOnStartup: true,
+        });
+
         // 4. Load config with registry-aware validation + default resolution
-        //    Ensure essential plugins have load_on_startup = true by default
         resetConfigCache();
         cachedConfig = loadConfig(undefined, registry);
         const config = cachedConfig;
-
-        // Set load_on_startup defaults for essential plugins (if not set by user)
-        for (const essentialId of ["plugin-manager", "config"]) {
-          if (!config.plugins[essentialId]) {
-            config.plugins[essentialId] = {};
-          }
-          if (config.plugins[essentialId].load_on_startup === undefined) {
-            config.plugins[essentialId].load_on_startup = true;
-          }
-        }
 
         ensureDirectoriesExist({
           dataDir: config.paths.dataDir,
