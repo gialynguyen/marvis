@@ -41,6 +41,9 @@ importers:
       '@marvis/plugin-trading':
         specifier: workspace:*
         version: link:../../packages/plugin-trading
+      '@sinclair/typebox':
+        specifier: ^0.34.11
+        version: 0.34.48
       commander:
         specifier: ^12.1.0
         version: 12.1.0

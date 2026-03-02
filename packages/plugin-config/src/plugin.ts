@@ -14,6 +14,7 @@ import {
   getPluginConfig,
   setPluginConfig,
   resetPluginConfig,
+  getConfigSchema,
 } from "./tools";
 
 export class ConfigPlugin extends BasePlugin {
@@ -27,7 +28,10 @@ export class ConfigPlugin extends BasePlugin {
 
   private registry: PluginConfigRegistry;
   private currentConfig!: MarvisConfig;
-  private reloadCallback?: () => Promise<{ applied: string[]; errors: string[] }>;
+  private reloadCallback?: () => Promise<{
+    applied: string[];
+    errors: string[];
+  }>;
 
   constructor(registry: PluginConfigRegistry) {
     super();
@@ -38,7 +42,9 @@ export class ConfigPlugin extends BasePlugin {
    * Set a callback that triggers a full config hot-reload across the daemon.
    * Called by the daemon after initialization to wire up the reload manager.
    */
-  setReloadCallback(cb: () => Promise<{ applied: string[]; errors: string[] }>): void {
+  setReloadCallback(
+    cb: () => Promise<{ applied: string[]; errors: string[] }>,
+  ): void {
     this.reloadCallback = cb;
   }
 
@@ -59,6 +65,41 @@ export class ConfigPlugin extends BasePlugin {
 
   getTools(): AgentTool[] {
     return [
+      // 0. get_config_schema
+      {
+        name: "get_config_schema",
+        description:
+          "Get the complete configuration schema for the entire Marvis system, including core config and all registered plugin configs. " +
+          "Returns JSON Schema format describing every config field, its type, constraints (enums, optional/required), defaults, and descriptions. " +
+          "Use this BEFORE updating config to understand valid values and structure.",
+        dangerLevel: "safe",
+        parameters: Type.Object({}),
+        execute: async () => {
+          try {
+            const schema = getConfigSchema(this.registry);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(schema, null, 2),
+                },
+              ],
+              details: {},
+            };
+          } catch (error) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+                },
+              ],
+              details: {},
+            };
+          }
+        },
+      } satisfies AgentTool,
+
       // 1. get_config
       {
         name: "get_config",
@@ -83,6 +124,9 @@ export class ConfigPlugin extends BasePlugin {
                   text: JSON.stringify(result, null, 2),
                 },
               ],
+              details: {
+                params,
+              },
             };
           } catch (error) {
             return {
@@ -92,10 +136,13 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
+              details: {
+                params,
+              },
             };
           }
         },
-      },
+      } satisfies AgentTool<{ section?: string }>,
 
       // 2. get_config_value
       {
@@ -119,6 +166,7 @@ export class ConfigPlugin extends BasePlugin {
                   text: `${params.path} = ${JSON.stringify(value, null, 2)}`,
                 },
               ],
+              details: {},
             };
           } catch (error) {
             return {
@@ -128,10 +176,11 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
+              details: {},
             };
           }
         },
-      },
+      } satisfies AgentTool<{ path: string }>,
 
       // 3. set_config_value
       {
@@ -141,7 +190,8 @@ export class ConfigPlugin extends BasePlugin {
         dangerLevel: "moderate",
         parameters: Type.Object({
           path: Type.String({
-            description: "Dot-separated path to the config value, e.g. 'llm.model'",
+            description:
+              "Dot-separated path to the config value, e.g. 'llm.model'",
           }),
           value: Type.Unknown({
             description: "New value to set",
@@ -149,7 +199,10 @@ export class ConfigPlugin extends BasePlugin {
         }),
         execute: async (params: { path: string; value: unknown }) => {
           try {
-            const { updatedSection, configPath } = setConfigValue(params.path, params.value);
+            const { updatedSection, configPath } = setConfigValue(
+              params.path,
+              params.value,
+            );
             this.reloadConfig();
 
             // Trigger hot-reload across the daemon
@@ -171,6 +224,7 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Updated ${params.path} in ${configPath}\n\nUpdated section:\n${JSON.stringify(updatedSection, null, 2)}${reloadInfo}\n\nNote: Custom comments in the config file have been replaced.`,
                 },
               ],
+              details: {},
             };
           } catch (error) {
             return {
@@ -180,10 +234,11 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
+              details: {},
             };
           }
         },
-      },
+      } satisfies AgentTool<{ path: string; value: unknown }>,
 
       // 4. list_plugins
       {
@@ -202,6 +257,7 @@ export class ConfigPlugin extends BasePlugin {
                   text: "No plugins with configuration schemas are registered.",
                 },
               ],
+              details: { plugins: [] },
             };
           }
           return {
@@ -211,9 +267,10 @@ export class ConfigPlugin extends BasePlugin {
                 text: JSON.stringify(plugins, null, 2),
               },
             ],
+            details: { plugins },
           };
         },
-      },
+      } satisfies AgentTool,
 
       // 5. get_plugin_config
       {
@@ -228,7 +285,11 @@ export class ConfigPlugin extends BasePlugin {
         }),
         execute: async (params: { pluginId: string }) => {
           try {
-            const result = getPluginConfig(this.registry, this.currentConfig, params.pluginId);
+            const result = getPluginConfig(
+              this.registry,
+              this.currentConfig,
+              params.pluginId,
+            );
             return {
               content: [
                 {
@@ -236,6 +297,7 @@ export class ConfigPlugin extends BasePlugin {
                   text: JSON.stringify(result, null, 2),
                 },
               ],
+              details: {},
             };
           } catch (error) {
             return {
@@ -245,10 +307,11 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
+              details: { pluginId: params.pluginId },
             };
           }
         },
-      },
+      } satisfies AgentTool<{ pluginId: string }>,
 
       // 6. set_plugin_config
       {
@@ -261,13 +324,18 @@ export class ConfigPlugin extends BasePlugin {
             description: "Plugin ID (e.g. 'shell', 'trading')",
           }),
           key: Type.String({
-            description: "Config key to update (e.g. 'exchange', 'default_timeout')",
+            description:
+              "Config key to update (e.g. 'exchange', 'default_timeout')",
           }),
           value: Type.Unknown({
             description: "New value to set",
           }),
         }),
-        execute: async (params: { pluginId: string; key: string; value: unknown }) => {
+        execute: async (params: {
+          pluginId: string;
+          key: string;
+          value: unknown;
+        }) => {
           try {
             const { updatedConfig, configPath } = setPluginConfig(
               this.registry,
@@ -296,6 +364,11 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Updated plugin "${params.pluginId}" config in ${configPath}\n\nCurrent config:\n${JSON.stringify(updatedConfig, null, 2)}${reloadInfo}`,
                 },
               ],
+              details: {
+                pluginId: params.pluginId,
+                key: params.key,
+                value: params.value,
+              },
             };
           } catch (error) {
             return {
@@ -305,10 +378,15 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
+              details: {
+                pluginId: params.pluginId,
+                key: params.key,
+                value: params.value,
+              },
             };
           }
         },
-      },
+      } satisfies AgentTool<{ pluginId: string; key: string; value: unknown }>,
 
       // 7. reset_plugin_config
       {
@@ -322,7 +400,8 @@ export class ConfigPlugin extends BasePlugin {
           }),
           key: Type.Optional(
             Type.String({
-              description: "Optional: reset only this key (otherwise resets all plugin config)",
+              description:
+                "Optional: reset only this key (otherwise resets all plugin config)",
             }),
           ),
         }),
@@ -357,6 +436,10 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Reset ${what} to defaults in ${configPath}\n\nDefault config:\n${JSON.stringify(updatedConfig, null, 2)}${reloadInfo}`,
                 },
               ],
+              details: {
+                pluginId: params.pluginId,
+                key: params.key,
+              },
             };
           } catch (error) {
             return {
@@ -366,16 +449,21 @@ export class ConfigPlugin extends BasePlugin {
                   text: `Error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
+              details: {
+                pluginId: params.pluginId,
+                key: params.key,
+              },
             };
           }
         },
-      },
+      } satisfies AgentTool<{ pluginId: string; key?: string }>,
     ];
   }
 
   getSystemPromptFragment(): string {
     return `## Configuration Manager
 You can inspect and modify Marvis's configuration.
+- Use \`get_config_schema\` to get the full config schema (core + plugins) with types, constraints, defaults, and descriptions — call this BEFORE updating config to know what values are valid
 - Use \`get_config\` to see the current configuration
 - Use \`get_config_value\` to read a specific setting by path (e.g., "llm.provider")
 - Use \`set_config_value\` to change a setting (writes to config.toml and hot-reloads)

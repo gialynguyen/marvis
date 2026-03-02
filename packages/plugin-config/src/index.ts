@@ -7,4 +7,5 @@ export {
   getPluginConfig,
   setPluginConfig,
   resetPluginConfig,
+  getConfigSchema,
 } from "./tools";

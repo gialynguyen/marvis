@@ -1,16 +1,18 @@
-import type {
-  AgentToolResult,
-  AgentTool as PiAgentTool,
-} from "@mariozechner/pi-agent-core";
-import type { PluginManifest, PluginHealthCheck, PluginMode } from "../types";
-import { createLogger, type Logger } from "../daemon/logger";
+import type { ImageContent, TextContent } from "@mariozechner/pi-ai";
 import type { TObject, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
+import { type Logger, createLogger } from "../daemon/logger";
+import type { PluginHealthCheck, PluginManifest, PluginMode } from "../types";
 
 // Re-export for convenience
 export type { PluginManifest };
 
 export type DangerLevel = "safe" | "moderate" | "dangerous";
+
+export interface AgentToolResult<T> {
+  content: (TextContent | ImageContent)[];
+  details?: T;
+}
 
 export interface AgentTool<TParams = any, TResult = any> {
   name: string;

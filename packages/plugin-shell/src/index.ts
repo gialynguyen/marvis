@@ -1,4 +1,9 @@
-import { type AgentTool, BasePlugin, type PluginManifest, type PluginConfigDescriptor } from "@marvis/core";
+import {
+  type AgentTool,
+  BasePlugin,
+  type PluginManifest,
+  type PluginConfigDescriptor,
+} from "@marvis/core";
 import { Type } from "@sinclair/typebox";
 import {
   type ExecuteCommandParams,
@@ -18,18 +23,28 @@ export class ShellPlugin extends BasePlugin {
 
   configDescriptor: PluginConfigDescriptor = {
     schema: Type.Object({
-      allowed_commands: Type.Optional(Type.Array(Type.String())),
-      default_timeout: Type.Optional(Type.Number()),
-      max_buffer_size: Type.Optional(Type.Number()),
+      allowed_commands: Type.Optional(
+        Type.Array(
+          Type.String({
+            description:
+              "Whitelist of allowed shell commands (empty = all allowed)",
+          }),
+        ),
+      ),
+      default_timeout: Type.Optional(
+        Type.Number({
+          description: "Default timeout for shell commands in milliseconds",
+        }),
+      ),
+      max_buffer_size: Type.Optional(
+        Type.Number({
+          description: "Maximum buffer size for command output in bytes",
+        }),
+      ),
     }),
     defaults: {
       default_timeout: 30000,
       max_buffer_size: 10485760,
-    },
-    descriptions: {
-      allowed_commands: "Whitelist of allowed shell commands (empty = all allowed)",
-      default_timeout: "Default command timeout in milliseconds",
-      max_buffer_size: "Maximum output buffer size in bytes",
     },
   };
 

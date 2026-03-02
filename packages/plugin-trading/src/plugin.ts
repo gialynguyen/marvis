@@ -34,17 +34,26 @@ export class TradingPlugin extends BasePlugin {
 
   configDescriptor: PluginConfigDescriptor<TradingPluginConfig> = {
     schema: Type.Object({
-      exchange: Type.Optional(Type.String()),
-      webPort: Type.Optional(Type.Number()),
-      defaultSymbols: Type.Optional(Type.Array(Type.String())),
+      exchange: Type.Optional(
+        Type.String({
+          description: "Exchange to connect to (supported: binance)",
+        }),
+      ),
+      webPort: Type.Optional(
+        Type.Number({
+          description: "Port for the trading web dashboard",
+        }),
+      ),
+      defaultSymbols: Type.Optional(
+        Type.Array(
+          Type.String({
+            description:
+              "Default trading pairs to track. There are my favorite coins :)",
+          }),
+        ),
+      ),
     }),
     defaults: DEFAULT_TRADING_CONFIG,
-    descriptions: {
-      exchange: "Exchange to connect to (supported: binance)",
-      webPort: "Port for the trading web dashboard",
-      defaultSymbols:
-        "Default trading pairs to track. There are my favorite coins :)",
-    },
   };
 
   private exchange!: Exchange;
