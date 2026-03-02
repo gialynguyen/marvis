@@ -23,6 +23,7 @@
     "@marvis/plugin-manager": "workspace:*",
     "@marvis/plugin-shell": "workspace:*",
     "@marvis/plugin-trading": "workspace:*",
+    "@sinclair/typebox": "^0.34.11",
     "commander": "^12.1.0"
   },
   "devDependencies": {
