@@ -1,34 +1,26 @@
 {
-  "name": "@marvis/cli",
+  "name": "@marvis/plugin-manager",
   "version": "0.1.0",
   "type": "module",
-  "private": true,
-  "bin": {
-    "marvis": "dist/bin/marvis.js"
+  "exports": {
+    ".": "./dist/index.js"
   },
   "scripts": {
     "build": "tsdown",
     "lint": "biome lint src/",
     "lint:unsafe": "biome lint src/ --write --unsafe",
     "format": "biome format src/ --write",
-    "dev": "tsx watch src/bin/marvis.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@marvis/config": "workspace:*",
     "@marvis/core": "workspace:*",
-    "@marvis/plugin-config": "workspace:*",
-    "@marvis/plugin-manager": "workspace:*",
-    "@marvis/plugin-shell": "workspace:*",
-    "@marvis/plugin-trading": "workspace:*",
-    "commander": "^12.1.0"
+    "@sinclair/typebox": "^0.34.11"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsdown": "^0.21.0-beta.2",
-    "tsx": "^4.19.2",
     "typescript": "^5.4.0",
     "vitest": "^2.1.8"
   }

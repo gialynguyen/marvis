@@ -15,7 +15,7 @@ export class MarvisDaemon {
   private config: DaemonConfig;
   private isShuttingDown = false;
   private memoryStore!: MemoryStore;
-  private pluginManager!: PluginManager;
+  private pluginManager: PluginManager;
   private currentConversationId: string | null = null;
   private startTime = 0;
   private marvisAgent!: MarvisAgent;
@@ -27,6 +27,7 @@ export class MarvisDaemon {
   constructor(config: DaemonConfig) {
     this.config = config;
     this.logger = createLogger("daemon", config.logFile);
+    this.pluginManager = new PluginManager();
   }
 
   /**
@@ -57,8 +58,6 @@ export class MarvisDaemon {
 
     this.memoryStore = new MemoryStore(this.config.dbPath);
     this.logger.info("Memory store initialized");
-
-    this.pluginManager = new PluginManager();
 
     await this.loadBuiltinPlugins();
 
@@ -114,13 +113,26 @@ export class MarvisDaemon {
   }
 
   private async loadBuiltinPlugins(): Promise<void> {
-    // Load externally registered plugins
+    // Load externally registered plugins based on load_on_startup config
     for (const { plugin, config } of this.pendingPlugins) {
+      const pluginId = plugin.manifest.id;
       const pluginConfig = {
         ...config,
-        ...this.config.marvisConfig.plugins[plugin.manifest.id],
+        ...this.config.marvisConfig.plugins[pluginId],
       };
-      await this.pluginManager.loadPlugin(plugin, pluginConfig);
+
+      // Check load_on_startup from the merged plugin config (default: false)
+      const loadOnStartup = pluginConfig.load_on_startup ?? false;
+
+      // Remove load_on_startup from the config passed to the plugin itself
+      // (it's a daemon-level concern, not a plugin config field)
+      const { load_on_startup: _, ...pluginInitConfig } = pluginConfig;
+
+      if (loadOnStartup) {
+        await this.pluginManager.loadPlugin(plugin, pluginInitConfig);
+      } else {
+        this.pluginManager.registerAvailable(plugin, pluginInitConfig);
+      }
     }
     this.pendingPlugins = [];
   }
@@ -219,7 +231,7 @@ export class MarvisDaemon {
   private handlePlugins(): IPCResponse {
     return {
       success: true,
-      data: this.pluginManager.listPlugins(),
+      data: this.pluginManager.getAllPlugins(),
     };
   }
 
@@ -300,6 +312,16 @@ export class MarvisDaemon {
   /** Get the reload manager for external use (e.g., ConfigPlugin) */
   getReloadManager(): ConfigReloadManager | null {
     return this.reloadManager;
+  }
+
+  /** Get the plugin manager for external use (e.g., PluginManagerPlugin) */
+  getPluginManager(): PluginManager {
+    return this.pluginManager;
+  }
+
+  /** Get the MarvisAgent for external use (e.g., tool refresh after plugin load/unload) */
+  getMarvisAgent(): MarvisAgent {
+    return this.marvisAgent;
   }
 
   private async autoTitleConversation(firstMessage: string): Promise<void> {

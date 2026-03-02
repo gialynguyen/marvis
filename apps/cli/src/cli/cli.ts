@@ -11,6 +11,7 @@ import { createTradingCommand } from "./commands/trading";
 import { ShellPlugin } from "@marvis/plugin-shell";
 import { TradingPlugin } from "@marvis/plugin-trading";
 import { ConfigPlugin } from "@marvis/plugin-config";
+import { PluginManagerPlugin } from "@marvis/plugin-manager";
 
 // Cached config - loaded once on CLI startup
 let cachedConfig: MarvisConfig | null = null;
@@ -85,9 +86,20 @@ export function createCLI(): Command {
         }
 
         // 4. Load config with registry-aware validation + default resolution
+        //    Ensure essential plugins have load_on_startup = true by default
         resetConfigCache();
         cachedConfig = loadConfig(undefined, registry);
         const config = cachedConfig;
+
+        // Set load_on_startup defaults for essential plugins (if not set by user)
+        for (const essentialId of ["plugin-manager", "config"]) {
+          if (!config.plugins[essentialId]) {
+            config.plugins[essentialId] = {};
+          }
+          if (config.plugins[essentialId].load_on_startup === undefined) {
+            config.plugins[essentialId].load_on_startup = true;
+          }
+        }
 
         ensureDirectoriesExist({
           dataDir: config.paths.dataDir,
@@ -100,17 +112,30 @@ export function createCLI(): Command {
         daemon.setLoadConfigFn(() => loadConfig(undefined, registry));
 
         // 6. Register plugins with daemon
+        //    The daemon's loadBuiltinPlugins() will use load_on_startup to decide
+        //    which plugins to load immediately vs. register as available.
         daemon.registerPlugin(shellPlugin);
         daemon.registerPlugin(tradingPlugin);
         daemon.registerPlugin(configPlugin);
 
+        // Create PluginManagerPlugin (needs pluginManager reference from daemon after start)
+        // Register it with daemon — it will be loaded based on load_on_startup config
+        // We create a placeholder and wire it up after start()
+        const pluginManagerPlugin = new PluginManagerPlugin(daemon.getPluginManager());
+        daemon.registerPlugin(pluginManagerPlugin);
+
         await daemon.start();
 
-        // 7. Wire ConfigPlugin's reload callback to the daemon's reload manager
+        // 7. Wire callbacks after daemon start
         const reloadManager = daemon.getReloadManager();
         if (reloadManager) {
           configPlugin.setReloadCallback(() => reloadManager.reload());
         }
+
+        // Wire PluginManagerPlugin's refresh callback to MarvisAgent
+        pluginManagerPlugin.setRefreshCallback(() => {
+          daemon.getMarvisAgent().refreshTools();
+        });
 
         // Keep process running
         console.log("Marvis daemon running in foreground. Press Ctrl+C to stop.");
@@ -174,7 +199,7 @@ export function createCLI(): Command {
   // List plugins
   program
     .command("plugins")
-    .description("List loaded plugins")
+    .description("List all plugins (loaded and available)")
     .action(async () => {
       if (!isDaemonRunning()) {
         console.log("Marvis daemon is not running");
@@ -185,15 +210,17 @@ export function createCLI(): Command {
       const response = await client.send({ type: "plugins" });
 
       if (response.success) {
-        console.log("Loaded Plugins:");
+        console.log("Plugins:");
         const plugins = response.data as Array<{
           id: string;
           name: string;
           version: string;
           mode: string;
+          status: string;
         }>;
         for (const plugin of plugins) {
-          console.log(`  - ${plugin.name} (${plugin.id}) v${plugin.version} [${plugin.mode}]`);
+          const statusLabel = plugin.status === "loaded" ? "loaded" : "available";
+          console.log(`  - ${plugin.name} (${plugin.id}) v${plugin.version} [${plugin.mode}] (${statusLabel})`);
         }
       } else {
         console.error("Failed to list plugins:", response.error);

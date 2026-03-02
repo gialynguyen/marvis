@@ -50,6 +50,7 @@ export class MarvisAgent {
         // model: getModel(config.provider as any, config.model as any),
         model: getModel("zai", "glm-4.7"),
         tools: this.wrapPluginTools(),
+        thinkingLevel: "xhigh",
       },
       getApiKey() {
         return config.apiKey;
@@ -138,6 +139,16 @@ export class MarvisAgent {
 
   setModel(provider: string, model: string): void {
     this.agent.setModel(getModel(provider as any, model as any));
+  }
+
+  /**
+   * Re-read tools from the plugin manager and update the agent's tool set.
+   * Call this after loading or unloading plugins at runtime so that the agent
+   * sees the new tool set in subsequent turns.
+   */
+  refreshTools(): void {
+    const tools = this.wrapPluginTools();
+    this.agent.setTools(tools);
   }
 
   /** Update agent config at runtime (hot-reload) */
@@ -239,7 +250,9 @@ export class MarvisAgent {
       });
     } else if (msg.role === "toolResult") {
       const textParts = Array.isArray(msg.content)
-        ? msg.content.filter((p: any) => p.type === "text").map((p: any) => p.text)
+        ? msg.content
+            .filter((p: any) => p.type === "text")
+            .map((p: any) => p.text)
         : [String(msg.content)];
 
       await this.memoryStore.addMessage(this.conversationId, {
